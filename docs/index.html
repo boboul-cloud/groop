@@ -99,23 +99,93 @@ input:focus{outline:none;border-color:var(--ocean)}
     return;
   }
 
-  var config;
-  try {
-    var b64 = hash.replace(/-/g, '+').replace(/_/g, '/');
-    while (b64.length % 4) b64 += '=';
-    var json = decodeURIComponent(escape(atob(b64)));
-    config = JSON.parse(json);
-  } catch(e) {
-    document.getElementById("errorSection").innerHTML =
-      '<div class="card error"><h2>&#x26A0;&#xFE0F; Erreur</h2><p>Impossible de lire les donn&eacute;es. Demandez un nouveau lien au vendeur.</p></div>';
-    return;
+  // Décodage base64url
+  function b64urlDecode(s) {
+    var b = s.replace(/-/g, '+').replace(/_/g, '/');
+    while (b.length % 4) b += '=';
+    return atob(b);
   }
 
-  var VARIANTES = config.v || [];
-  var UNITE = config.u || "kg";
-  var TITRE = config.t || "Commande";
-  var INC = (UNITE === "kg") ? 0.5 : 1;
-  var TEL_VENDEUR = config.p || "";
+  // Décompression zlib via DecompressionStream
+  function inflateBytes(bytes) {
+    return new Response(
+      new Blob([bytes]).stream().pipeThrough(new DecompressionStream('deflate'))
+    ).text();
+  }
+
+  // Parse le format compact v1 : "1|titre|unite|nom~prix~t1,t2~c1,c2|..."
+  function parseCompact(str) {
+    var seg = str.split('|');
+    if (seg[0] !== '1') return null;
+    var cfg = { t: seg[1], u: seg[2], v: [] };
+    for (var i = 3; i < seg.length; i++) {
+      var f = seg[i].split('~');
+      var v = { n: f[0], x: parseFloat(f[1]) || 0 };
+      if (f[2]) v.ta = f[2].split(',');
+      if (f[3]) v.co = f[3].split(',');
+      cfg.v.push(v);
+    }
+    return cfg;
+  }
+
+  function showError(msg) {
+    document.getElementById('errorSection').innerHTML =
+      '<div class="card error"><h2>&#x26A0;&#xFE0F; Erreur</h2><p>' + msg + '</p></div>';
+  }
+
+  // Déterminer si compressé (préfixe 'z') ou legacy JSON
+  var compressed = hash.charAt(0) === 'z';
+  if (compressed) {
+    try {
+      var raw = b64urlDecode(hash.substring(1));
+      var bytes = new Uint8Array(raw.length);
+      for (var i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+      inflateBytes(bytes).then(function(text) {
+        var config = parseCompact(text);
+        if (!config) { showError('Format invalide.'); return; }
+        boot(config);
+      }).catch(function() { showError('Impossible de d&eacute;compresser. Demandez un nouveau lien.'); });
+      return; // async: boot() appellera render()
+    } catch(e) {
+      showError('Lien corrompu. Demandez un nouveau lien.');
+      return;
+    }
+  }
+
+  // Legacy: JSON en base64url (ancien format)
+  var config;
+  try {
+    var decoded = b64urlDecode(hash);
+    var json = decodeURIComponent(escape(decoded));
+    var parsed = JSON.parse(json);
+    // Peut aussi être format compact non-compressé
+    if (typeof parsed === 'string' && parsed.startsWith('1|')) {
+      config = parseCompact(parsed);
+    } else {
+      config = parsed;
+    }
+  } catch(e) {
+    // Essayer format compact non-compressé
+    try {
+      var text = decodeURIComponent(escape(b64urlDecode(hash)));
+      config = parseCompact(text);
+    } catch(e2) {
+      showError('Impossible de lire les donn&eacute;es. Demandez un nouveau lien.');
+      return;
+    }
+  }
+  if (!config) {
+    showError('Donn&eacute;es invalides.');
+    return;
+  }
+  boot(config);
+
+  function boot(config) {
+    var VARIANTES = config.v || [];
+    var UNITE = config.u || 'kg';
+    var TITRE = config.t || 'Commande';
+    var INC = (UNITE === 'kg') ? 0.5 : 1;
+    var TEL_VENDEUR = config.p || '';
 
   document.getElementById("titre").textContent = TITRE;
   document.title = TITRE + " — Commande";
@@ -232,6 +302,7 @@ input:focus{outline:none;border-color:var(--ocean)}
   };
 
   init();
+  } // fin boot()
 })();
 </script>
 </body>

@@ -758,27 +758,29 @@ class OrderStore: ObservableObject {
     private let pagesBaseURL = "https://boboul-cloud.github.io/coquilles/"
 
     /// Génère un lien web vers la page de commande hébergée sur GitHub Pages
+    /// Format compact : "1|titre|unite|nom~prix~t1,t2~c1,c2|..." compressé zlib + base64url
     func genererLienWebCommande() -> URL? {
-        let variantesData = variantes.filter { !$0.nom.isEmpty }.map { v -> [String: Any] in
-            var dict: [String: Any] = ["n": v.nom, "x": v.prix]
-            if !v.tailles.isEmpty { dict["ta"] = v.tailles }
-            if !v.couleurs.isEmpty { dict["co"] = v.couleurs }
-            return dict
+        let parts = variantes.filter { !$0.nom.isEmpty }.map { v in
+            "\(v.nom)~\(v.prix)~\(v.tailles.joined(separator: ","))~\(v.couleurs.joined(separator: ","))"
         }
-        let config: [String: Any] = [
-            "t": titreCampagne,
-            "u": uniteQuantite.rawValue,
-            "v": variantesData
-        ]
-        guard let jsonData = try? JSONSerialization.data(withJSONObject: config),
-              let jsonString = String(data: jsonData, encoding: .utf8) else { return nil }
+        guard !parts.isEmpty else { return nil }
+        let payload = "1|\(titreCampagne)|\(uniteQuantite.rawValue)|\(parts.joined(separator: "|"))"
+        guard let raw = payload.data(using: .utf8) else { return nil }
 
-        let base64 = Data(jsonString.utf8).base64EncodedString()
-            .replacingOccurrences(of: "+", with: "-")
-            .replacingOccurrences(of: "/", with: "_")
-            .replacingOccurrences(of: "=", with: "")
-        let urlString = pagesBaseURL + "#" + base64
-        return URL(string: urlString)
+        // Compression zlib puis base64url
+        let encoded: String
+        if let compressed = try? (raw as NSData).compressed(using: .zlib) as Data {
+            encoded = "z" + (compressed.base64EncodedString()
+                .replacingOccurrences(of: "+", with: "-")
+                .replacingOccurrences(of: "/", with: "_")
+                .replacingOccurrences(of: "=", with: ""))
+        } else {
+            encoded = raw.base64EncodedString()
+                .replacingOccurrences(of: "+", with: "-")
+                .replacingOccurrences(of: "/", with: "_")
+                .replacingOccurrences(of: "=", with: "")
+        }
+        return URL(string: pagesBaseURL + "#" + encoded)
     }
 
     private func escaperJS(_ s: String) -> String {
