@@ -101,7 +101,9 @@ input:focus{outline:none;border-color:var(--ocean)}
 
   var config;
   try {
-    var json = decodeURIComponent(escape(atob(hash)));
+    var b64 = hash.replace(/-/g, '+').replace(/_/g, '/');
+    while (b64.length % 4) b64 += '=';
+    var json = decodeURIComponent(escape(atob(b64)));
     config = JSON.parse(json);
   } catch(e) {
     document.getElementById("errorSection").innerHTML =

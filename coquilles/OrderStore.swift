@@ -774,6 +774,9 @@ class OrderStore: ObservableObject {
               let jsonString = String(data: jsonData, encoding: .utf8) else { return nil }
 
         let base64 = Data(jsonString.utf8).base64EncodedString()
+            .replacingOccurrences(of: "+", with: "-")
+            .replacingOccurrences(of: "/", with: "_")
+            .replacingOccurrences(of: "=", with: "")
         let urlString = pagesBaseURL + "#" + base64
         return URL(string: urlString)
     }

@@ -79,453 +79,13 @@ struct MessagesExportView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 20) {
-                    // MARK: - Finalisation
-                    if store.toutEstFini {
-                        VStack(spacing: 12) {
-                            Image(systemName: "party.popper.fill")
-                                .font(.system(size: 40))
-                                .foregroundStyle(.seafoam)
-                                .symbolEffect(.bounce.up, value: true)
-
-                            Text("Toutes les commandes sont finalisées !")
-                                .font(.headline)
-                                .foregroundStyle(.seafoam)
-                                .multilineTextAlignment(.center)
-
-                            Button {
-                                showConfirmFinie = true
-                            } label: {
-                                HStack {
-                                    Image(systemName: "checkmark.seal.fill")
-                                    Text("Générer le récapitulatif final")
-                                        .fontWeight(.semibold)
-                                }
-                                .frame(maxWidth: .infinity)
-                                .padding()
-                                .background(Color.seafoam.gradient)
-                                .foregroundStyle(.white)
-                                .clipShape(RoundedRectangle(cornerRadius: 14))
-                            }
-                        }
-                        .padding()
-                        .background(Color.seafoam.opacity(0.08))
-                        .clipShape(RoundedRectangle(cornerRadius: 20))
-                    }
-
-                    // MARK: - Export
-                    VStack(spacing: 12) {
-                        HStack {
-                            Image(systemName: "doc.richtext")
-                                .foregroundStyle(.ocean)
-                            Text("Export PDF")
-                                .font(.headline)
-                                .foregroundStyle(.ocean)
-                            Spacer()
-                        }
-
-                        Button {
-                            if let url = store.exporterRecapitulatif() {
-                                previewURL = url
-                            }
-                        } label: {
-                            HStack {
-                                Image(systemName: "doc.text.magnifyingglass")
-                                Text("Consulter le récapitulatif")
-                                    .fontWeight(.medium)
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color.ocean.opacity(0.1))
-                            .foregroundStyle(.ocean)
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
-                        }
-
-                        Button {
-                            if let url = store.exporterRecapitulatif() {
-                                shareItem = IdentifiableURL(url: url)
-                                showExportFeedback = true
-                            }
-                        } label: {
-                            HStack {
-                                Image(systemName: "square.and.arrow.up")
-                                Text("Partager le récapitulatif")
-                                    .fontWeight(.medium)
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(LinearGradient.oceanGradient)
-                            .foregroundStyle(.white)
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
-                        }
-                    }
-                    .padding()
-                    .background(.ultraThinMaterial)
-                    .clipShape(RoundedRectangle(cornerRadius: 20))
-
-                    // MARK: - Bon de commande groupé
-                    VStack(spacing: 12) {
-                        HStack {
-                            Image(systemName: "list.clipboard.fill")
-                                .foregroundStyle(.ocean)
-                            Text("Bon de commande")
-                                .font(.headline)
-                                .foregroundStyle(.ocean)
-                            Spacer()
-                        }
-
-                        Text("Regroupe toutes les commandes par variante, taille et couleur")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-
-                        // Version détaillée : prix + clients
-                        BonCommandeButton(
-                            icon: "doc.text.magnifyingglass",
-                            label: "Détaillé (prix + clients)",
-                            style: .outline
-                        ) {
-                            if let url = store.exporterBonCommande(afficherPrix: true, afficherClients: true) {
-                                previewURL = url
-                            }
-                        }
-
-                        // Version avec prix, sans clients
-                        BonCommandeButton(
-                            icon: "eurosign.circle",
-                            label: "Avec prix, sans clients",
-                            style: .outline
-                        ) {
-                            if let url = store.exporterBonCommande(afficherPrix: true, afficherClients: false) {
-                                previewURL = url
-                            }
-                        }
-
-                        // Version fournisseur : sans clients, sans prix
-                        BonCommandeButton(
-                            icon: "shippingbox",
-                            label: "Fournisseur (quantités seules)",
-                            style: .outline
-                        ) {
-                            if let url = store.exporterBonCommande(afficherPrix: false, afficherClients: false) {
-                                previewURL = url
-                            }
-                        }
-                    }
-                    .padding()
-                    .background(.ultraThinMaterial)
-                    .clipShape(RoundedRectangle(cornerRadius: 20))
-
-                    // MARK: - Page web commande
-                    VStack(spacing: 12) {
-                        HStack {
-                            Image(systemName: "globe")
-                                .foregroundStyle(.ocean)
-                            Text("Page web commande")
-                                .font(.headline)
-                                .foregroundStyle(.ocean)
-                            Spacer()
-                        }
-
-                        Text("Partagez un lien web que vos clients ouvrent dans leur navigateur pour passer commande. La commande vous est envoyée par SMS.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-
-                        if let url = store.genererLienWebCommande() {
-                            Button {
-                                UIPasteboard.general.string = url.absoluteString
-                                showWebLinkCopied = true
-                            } label: {
-                                HStack {
-                                    Image(systemName: "doc.on.doc")
-                                    Text("Copier le lien")
-                                        .fontWeight(.medium)
-                                }
-                                .frame(maxWidth: .infinity)
-                                .padding()
-                                .background(Color.ocean.opacity(0.1))
-                                .foregroundStyle(.ocean)
-                                .clipShape(RoundedRectangle(cornerRadius: 12))
-                            }
-
-                            Button {
-                                shareItem = IdentifiableURL(url: url)
-                            } label: {
-                                HStack {
-                                    Image(systemName: "square.and.arrow.up")
-                                    Text("Partager le lien")
-                                        .fontWeight(.medium)
-                                }
-                                .frame(maxWidth: .infinity)
-                                .padding()
-                                .background(LinearGradient.oceanGradient)
-                                .foregroundStyle(.white)
-                                .clipShape(RoundedRectangle(cornerRadius: 12))
-                            }
-
-                            Text(url.absoluteString)
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
-                                .lineLimit(2)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                        } else {
-                            Text("Ajoutez des variantes dans la configuration pour générer le lien.")
-                                .font(.caption)
-                                .foregroundStyle(.tertiary)
-                        }
-                    }
-                    .padding()
-                    .background(.ultraThinMaterial)
-                    .clipShape(RoundedRectangle(cornerRadius: 20))
-
-                    // MARK: - Message groupé
-                    VStack(spacing: 12) {
-                        HStack {
-                            Image(systemName: "message.fill")
-                                .foregroundStyle(.ocean)
-                            Text("Message groupé")
-                                .font(.headline)
-                                .foregroundStyle(.ocean)
-                            Spacer()
-                        }
-
-                        ZStack(alignment: .topLeading) {
-                            TextEditor(text: $messageTexte)
-                                .frame(minHeight: 100)
-                                .scrollContentBackground(.hidden)
-                                .padding(8)
-                                .background(Color(.systemGray6))
-                                .clipShape(RoundedRectangle(cornerRadius: 12))
-
-                            if messageTexte.isEmpty {
-                                Text("Saisissez votre message ici…")
-                                    .foregroundStyle(.tertiary)
-                                    .padding(.top, 16)
-                                    .padding(.leading, 12)
-                                    .allowsHitTesting(false)
-                            }
-                        }
-
-                        Button {
-                            messageTexte = genererMessageInvitation()
-                        } label: {
-                            HStack(spacing: 8) {
-                                Image(systemName: "text.badge.star")
-                                Text("Générer une invitation")
-                                    .fontWeight(.medium)
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color.ocean.opacity(0.1))
-                            .foregroundStyle(.ocean)
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
-                        }
-                        .disabled(store.variantes.isEmpty)
-
-                        Button {
-                            clientSelectionType = .commande
-                            showClientSelection = true
-                        } label: {
-                            HStack(spacing: 8) {
-                                Image(systemName: "megaphone.fill")
-                                Text("Passer commande")
-                                    .fontWeight(.medium)
-                                Spacer()
-                                Text("\(store.tousLesNumeros.count)")
-                                    .font(.caption)
-                                    .foregroundStyle(.white)
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 3)
-                                    .background(.white.opacity(0.3))
-                                    .clipShape(Capsule())
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color.orange.gradient)
-                            .foregroundStyle(.white)
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
-                        }
-                        .disabled(messageTexte.isEmpty || store.tousLesNumeros.isEmpty || !MessageComposeView.canSendText)
-                        .opacity(messageTexte.isEmpty || store.tousLesNumeros.isEmpty ? 0.5 : 1)
-
-                        Button {
-                            clientSelectionType = .arrivee
-                            showClientSelection = true
-                        } label: {
-                            HStack(spacing: 8) {
-                                Image(systemName: "shippingbox.fill")
-                                Text("Commande arrivée")
-                                    .fontWeight(.medium)
-                                Spacer()
-                                Text("\(store.numerosAvecCommande.count)")
-                                    .font(.caption)
-                                    .foregroundStyle(.white)
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 3)
-                                    .background(.white.opacity(0.3))
-                                    .clipShape(Capsule())
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color.seafoam.gradient)
-                            .foregroundStyle(.white)
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
-                        }
-                        .disabled(messageTexte.isEmpty || store.numerosAvecCommande.isEmpty || !MessageComposeView.canSendText)
-                        .opacity(messageTexte.isEmpty || store.numerosAvecCommande.isEmpty ? 0.5 : 1)
-                    }
-                    .padding()
-                    .background(.ultraThinMaterial)
-                    .clipShape(RoundedRectangle(cornerRadius: 20))
-
-                    // MARK: - Sauvegarde campagne
-                    VStack(spacing: 12) {
-                        HStack {
-                            Image(systemName: "externaldrive.fill")
-                                .foregroundStyle(.ocean)
-                            Text("Sauvegarde campagne")
-                                .font(.headline)
-                                .foregroundStyle(.ocean)
-                            Spacer()
-                        }
-
-                        Text("Sauvegardez ou restaurez l'intégralité de la campagne (commandes, réglements, variantes…) au format JSON.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-
-                        // Sauvegarder
-                        Button {
-                            nomSauvegarde = store.titreCampagne
-                            showSauvegardeNom = true
-                        } label: {
-                            HStack {
-                                Image(systemName: "square.and.arrow.down.on.square")
-                                Text("Sauvegarder la campagne")
-                                    .fontWeight(.medium)
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(LinearGradient.oceanGradient)
-                            .foregroundStyle(.white)
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
-                        }
-
-                        // Partager le JSON
-                        Button {
-                            if let url = store.exporterCampagneJSON() {
-                                shareItem = IdentifiableURL(url: url)
-                            }
-                        } label: {
-                            HStack {
-                                Image(systemName: "square.and.arrow.up")
-                                Text("Partager le fichier JSON")
-                                    .fontWeight(.medium)
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color.ocean.opacity(0.1))
-                            .foregroundStyle(.ocean)
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
-                        }
-
-                        // Charger une sauvegarde
-                        Button {
-                            store.rafraichirListeCampagnes()
-                            showChargerCampagne = true
-                        } label: {
-                            HStack {
-                                Image(systemName: "tray.and.arrow.down")
-                                Text("Charger une sauvegarde")
-                                    .fontWeight(.medium)
-                                if !store.campagnesSauvegardees.isEmpty {
-                                    Spacer()
-                                    Text("\(store.campagnesSauvegardees.count)")
-                                        .font(.caption)
-                                        .foregroundStyle(.ocean)
-                                        .padding(.horizontal, 8)
-                                        .padding(.vertical, 3)
-                                        .background(Color.ocean.opacity(0.15))
-                                        .clipShape(Capsule())
-                                }
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color(.systemGray6))
-                            .foregroundStyle(.primary)
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
-                        }
-
-                        // Importer un JSON externe
-                        Button {
-                            showImportJSON = true
-                        } label: {
-                            HStack {
-                                Image(systemName: "doc.badge.plus")
-                                Text("Importer un fichier JSON")
-                                    .fontWeight(.medium)
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color(.systemGray6))
-                            .foregroundStyle(.primary)
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
-                        }
-                    }
-                    .padding()
-                    .background(.ultraThinMaterial)
-                    .clipShape(RoundedRectangle(cornerRadius: 20))
-
-                    // MARK: - Réglages
-                    VStack(spacing: 12) {
-                        HStack {
-                            Image(systemName: "gearshape.fill")
-                                .foregroundStyle(.ocean)
-                            Text("Réglages")
-                                .font(.headline)
-                                .foregroundStyle(.ocean)
-                            Spacer()
-                        }
-
-                        Button {
-                            showCampagneSetup = true
-                        } label: {
-                            HStack {
-                                Image(systemName: "gearshape.2")
-                                Text("Configurer la campagne")
-                                    .fontWeight(.medium)
-                                Spacer()
-                                Image(systemName: "chevron.right")
-                                    .font(.caption)
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color(.systemGray6))
-                            .foregroundStyle(.primary)
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
-                        }
-
-                        Button {
-                            showConfirmReset = true
-                        } label: {
-                            HStack {
-                                Image(systemName: "arrow.counterclockwise")
-                                Text("Remise à zéro")
-                                    .fontWeight(.medium)
-                                Spacer()
-                                Image(systemName: "chevron.right")
-                                    .font(.caption)
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color.coral.opacity(0.1))
-                            .foregroundStyle(.coral)
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
-                        }
-                    }
-                    .padding()
-                    .background(.ultraThinMaterial)
-                    .clipShape(RoundedRectangle(cornerRadius: 20))
+                    finalisationSection
+                    exportSection
+                    bonCommandeSection
+                    pageWebSection
+                    messageGroupeSection
+                    sauvegardeSection
+                    reglagesSection
                 }
                 .padding()
             }
@@ -613,6 +173,458 @@ struct MessagesExportView: View {
                 }
             }
         }
+    }
+
+    // MARK: - Sections extraites
+
+    @ViewBuilder
+    private var finalisationSection: some View {
+        if store.toutEstFini {
+            VStack(spacing: 12) {
+                Image(systemName: "party.popper.fill")
+                    .font(.system(size: 40))
+                    .foregroundStyle(.seafoam)
+                    .symbolEffect(.bounce.up, value: true)
+
+                Text("Toutes les commandes sont finalisées !")
+                    .font(.headline)
+                    .foregroundStyle(.seafoam)
+                    .multilineTextAlignment(.center)
+
+                Button {
+                    showConfirmFinie = true
+                } label: {
+                    HStack {
+                        Image(systemName: "checkmark.seal.fill")
+                        Text("Générer le récapitulatif final")
+                            .fontWeight(.semibold)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.seafoam.gradient)
+                    .foregroundStyle(.white)
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                }
+            }
+            .padding()
+            .background(Color.seafoam.opacity(0.08))
+            .clipShape(RoundedRectangle(cornerRadius: 20))
+        }
+    }
+
+    private var exportSection: some View {
+        VStack(spacing: 12) {
+            HStack {
+                Image(systemName: "doc.richtext")
+                    .foregroundStyle(.ocean)
+                Text("Export PDF")
+                    .font(.headline)
+                    .foregroundStyle(.ocean)
+                Spacer()
+            }
+
+            Button {
+                if let url = store.exporterRecapitulatif() {
+                    previewURL = url
+                }
+            } label: {
+                HStack {
+                    Image(systemName: "doc.text.magnifyingglass")
+                    Text("Consulter le récapitulatif")
+                        .fontWeight(.medium)
+                }
+                .frame(maxWidth: .infinity)
+                .padding()
+                .background(Color.ocean.opacity(0.1))
+                .foregroundStyle(.ocean)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+
+            Button {
+                if let url = store.exporterRecapitulatif() {
+                    shareItem = IdentifiableURL(url: url)
+                    showExportFeedback = true
+                }
+            } label: {
+                HStack {
+                    Image(systemName: "square.and.arrow.up")
+                    Text("Partager le récapitulatif")
+                        .fontWeight(.medium)
+                }
+                .frame(maxWidth: .infinity)
+                .padding()
+                .background(LinearGradient.oceanGradient)
+                .foregroundStyle(.white)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+        }
+        .padding()
+        .background(.ultraThinMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 20))
+    }
+
+    private var bonCommandeSection: some View {
+        VStack(spacing: 12) {
+            HStack {
+                Image(systemName: "list.clipboard.fill")
+                    .foregroundStyle(.ocean)
+                Text("Bon de commande")
+                    .font(.headline)
+                    .foregroundStyle(.ocean)
+                Spacer()
+            }
+
+            Text("Regroupe toutes les commandes par variante, taille et couleur")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            BonCommandeButton(
+                icon: "doc.text.magnifyingglass",
+                label: "Détaillé (prix + clients)",
+                style: .outline
+            ) {
+                if let url = store.exporterBonCommande(afficherPrix: true, afficherClients: true) {
+                    previewURL = url
+                }
+            }
+
+            BonCommandeButton(
+                icon: "eurosign.circle",
+                label: "Avec prix, sans clients",
+                style: .outline
+            ) {
+                if let url = store.exporterBonCommande(afficherPrix: true, afficherClients: false) {
+                    previewURL = url
+                }
+            }
+
+            BonCommandeButton(
+                icon: "shippingbox",
+                label: "Fournisseur (quantités seules)",
+                style: .outline
+            ) {
+                if let url = store.exporterBonCommande(afficherPrix: false, afficherClients: false) {
+                    previewURL = url
+                }
+            }
+        }
+        .padding()
+        .background(.ultraThinMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 20))
+    }
+
+    @ViewBuilder
+    private var pageWebSection: some View {
+        VStack(spacing: 12) {
+            HStack {
+                Image(systemName: "globe")
+                    .foregroundStyle(.ocean)
+                Text("Page web commande")
+                    .font(.headline)
+                    .foregroundStyle(.ocean)
+                Spacer()
+            }
+
+            Text("Partagez un lien web que vos clients ouvrent dans leur navigateur pour passer commande. La commande vous est envoyée par SMS.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            if let url = store.genererLienWebCommande() {
+                Button {
+                    UIPasteboard.general.string = url.absoluteString
+                    showWebLinkCopied = true
+                } label: {
+                    HStack {
+                        Image(systemName: "doc.on.doc")
+                        Text("Copier le lien")
+                            .fontWeight(.medium)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.ocean.opacity(0.1))
+                    .foregroundStyle(.ocean)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+
+                Button {
+                    shareItem = IdentifiableURL(url: url)
+                } label: {
+                    HStack {
+                        Image(systemName: "square.and.arrow.up")
+                        Text("Partager le lien")
+                            .fontWeight(.medium)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(LinearGradient.oceanGradient)
+                    .foregroundStyle(.white)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+
+                Text(url.absoluteString)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            } else {
+                Text("Ajoutez des variantes dans la configuration pour générer le lien.")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+            }
+        }
+        .padding()
+        .background(.ultraThinMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 20))
+    }
+
+    private var messageGroupeSection: some View {
+        VStack(spacing: 12) {
+            HStack {
+                Image(systemName: "message.fill")
+                    .foregroundStyle(.ocean)
+                Text("Message groupé")
+                    .font(.headline)
+                    .foregroundStyle(.ocean)
+                Spacer()
+            }
+
+            ZStack(alignment: .topLeading) {
+                TextEditor(text: $messageTexte)
+                    .frame(minHeight: 100)
+                    .scrollContentBackground(.hidden)
+                    .padding(8)
+                    .background(Color(.systemGray6))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+
+                if messageTexte.isEmpty {
+                    Text("Saisissez votre message ici…")
+                        .foregroundStyle(.tertiary)
+                        .padding(.top, 16)
+                        .padding(.leading, 12)
+                        .allowsHitTesting(false)
+                }
+            }
+
+            Button {
+                messageTexte = genererMessageInvitation()
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "text.badge.star")
+                    Text("Générer une invitation")
+                        .fontWeight(.medium)
+                }
+                .frame(maxWidth: .infinity)
+                .padding()
+                .background(Color.ocean.opacity(0.1))
+                .foregroundStyle(.ocean)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+            .disabled(store.variantes.isEmpty)
+
+            Button {
+                clientSelectionType = .commande
+                showClientSelection = true
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "megaphone.fill")
+                    Text("Passer commande")
+                        .fontWeight(.medium)
+                    Spacer()
+                    Text("\(store.tousLesNumeros.count)")
+                        .font(.caption)
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(.white.opacity(0.3))
+                        .clipShape(Capsule())
+                }
+                .frame(maxWidth: .infinity)
+                .padding()
+                .background(Color.orange.gradient)
+                .foregroundStyle(.white)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+            .disabled(messageTexte.isEmpty || store.tousLesNumeros.isEmpty || !MessageComposeView.canSendText)
+            .opacity(messageTexte.isEmpty || store.tousLesNumeros.isEmpty ? 0.5 : 1)
+
+            Button {
+                clientSelectionType = .arrivee
+                showClientSelection = true
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "shippingbox.fill")
+                    Text("Commande arrivée")
+                        .fontWeight(.medium)
+                    Spacer()
+                    Text("\(store.numerosAvecCommande.count)")
+                        .font(.caption)
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(.white.opacity(0.3))
+                        .clipShape(Capsule())
+                }
+                .frame(maxWidth: .infinity)
+                .padding()
+                .background(Color.seafoam.gradient)
+                .foregroundStyle(.white)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+            .disabled(messageTexte.isEmpty || store.numerosAvecCommande.isEmpty || !MessageComposeView.canSendText)
+            .opacity(messageTexte.isEmpty || store.numerosAvecCommande.isEmpty ? 0.5 : 1)
+        }
+        .padding()
+        .background(.ultraThinMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 20))
+    }
+
+    private var sauvegardeSection: some View {
+        VStack(spacing: 12) {
+            HStack {
+                Image(systemName: "externaldrive.fill")
+                    .foregroundStyle(.ocean)
+                Text("Sauvegarde campagne")
+                    .font(.headline)
+                    .foregroundStyle(.ocean)
+                Spacer()
+            }
+
+            Text("Sauvegardez ou restaurez l'intégralité de la campagne (commandes, réglements, variantes…) au format JSON.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            Button {
+                nomSauvegarde = store.titreCampagne
+                showSauvegardeNom = true
+            } label: {
+                HStack {
+                    Image(systemName: "square.and.arrow.down.on.square")
+                    Text("Sauvegarder la campagne")
+                        .fontWeight(.medium)
+                }
+                .frame(maxWidth: .infinity)
+                .padding()
+                .background(LinearGradient.oceanGradient)
+                .foregroundStyle(.white)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+
+            Button {
+                if let url = store.exporterCampagneJSON() {
+                    shareItem = IdentifiableURL(url: url)
+                }
+            } label: {
+                HStack {
+                    Image(systemName: "square.and.arrow.up")
+                    Text("Partager le fichier JSON")
+                        .fontWeight(.medium)
+                }
+                .frame(maxWidth: .infinity)
+                .padding()
+                .background(Color.ocean.opacity(0.1))
+                .foregroundStyle(.ocean)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+
+            Button {
+                store.rafraichirListeCampagnes()
+                showChargerCampagne = true
+            } label: {
+                HStack {
+                    Image(systemName: "tray.and.arrow.down")
+                    Text("Charger une sauvegarde")
+                        .fontWeight(.medium)
+                    if !store.campagnesSauvegardees.isEmpty {
+                        Spacer()
+                        Text("\(store.campagnesSauvegardees.count)")
+                            .font(.caption)
+                            .foregroundStyle(.ocean)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 3)
+                            .background(Color.ocean.opacity(0.15))
+                            .clipShape(Capsule())
+                    }
+                }
+                .frame(maxWidth: .infinity)
+                .padding()
+                .background(Color(.systemGray6))
+                .foregroundStyle(.primary)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+
+            Button {
+                showImportJSON = true
+            } label: {
+                HStack {
+                    Image(systemName: "doc.badge.plus")
+                    Text("Importer un fichier JSON")
+                        .fontWeight(.medium)
+                }
+                .frame(maxWidth: .infinity)
+                .padding()
+                .background(Color(.systemGray6))
+                .foregroundStyle(.primary)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+        }
+        .padding()
+        .background(.ultraThinMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 20))
+    }
+
+    private var reglagesSection: some View {
+        VStack(spacing: 12) {
+            HStack {
+                Image(systemName: "gearshape.fill")
+                    .foregroundStyle(.ocean)
+                Text("Réglages")
+                    .font(.headline)
+                    .foregroundStyle(.ocean)
+                Spacer()
+            }
+
+            Button {
+                showCampagneSetup = true
+            } label: {
+                HStack {
+                    Image(systemName: "gearshape.2")
+                    Text("Configurer la campagne")
+                        .fontWeight(.medium)
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.caption)
+                }
+                .frame(maxWidth: .infinity)
+                .padding()
+                .background(Color(.systemGray6))
+                .foregroundStyle(.primary)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+
+            Button {
+                showConfirmReset = true
+            } label: {
+                HStack {
+                    Image(systemName: "arrow.counterclockwise")
+                    Text("Remise à zéro")
+                        .fontWeight(.medium)
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.caption)
+                }
+                .frame(maxWidth: .infinity)
+                .padding()
+                .background(Color.coral.opacity(0.1))
+                .foregroundStyle(.coral)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+        }
+        .padding()
+        .background(.ultraThinMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 20))
     }
 }
 
