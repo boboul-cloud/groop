@@ -586,6 +586,160 @@ class OrderStore: ObservableObject {
         }
     }
 
+    // MARK: - PDF de distribution (par catégorie / client)
+
+    func genererPDFDistribution() -> Data {
+        let pageWidth: CGFloat = 595
+        let pageHeight: CGFloat = 842
+        let margin: CGFloat = 40
+        let contentWidth = pageWidth - margin * 2
+
+        let titleAttr: [NSAttributedString.Key: Any] = [
+            .font: UIFont.boldSystemFont(ofSize: 18),
+            .foregroundColor: UIColor.black
+        ]
+        let catAttr: [NSAttributedString.Key: Any] = [
+            .font: UIFont.boldSystemFont(ofSize: 14),
+            .foregroundColor: UIColor.white
+        ]
+        let clientAttr: [NSAttributedString.Key: Any] = [
+            .font: UIFont.boldSystemFont(ofSize: 12),
+            .foregroundColor: UIColor.darkGray
+        ]
+        let bodyAttr: [NSAttributedString.Key: Any] = [
+            .font: UIFont.systemFont(ofSize: 11),
+            .foregroundColor: UIColor.black
+        ]
+        let totalAttr: [NSAttributedString.Key: Any] = [
+            .font: UIFont.boldSystemFont(ofSize: 11),
+            .foregroundColor: UIColor(red: 0.05, green: 0.30, blue: 0.50, alpha: 1)
+        ]
+
+        // Grouper les commandes par catégorie
+        struct CatSection {
+            let titre: String
+            var clients: [Order]
+        }
+
+        var sections: [CatSection] = []
+        for cat in categories {
+            let clients = orders.filter { $0.estValide && $0.categorieID == cat.id }
+                .sorted { $0.nom.localizedCompare($1.nom) == .orderedAscending }
+            if !clients.isEmpty {
+                sections.append(CatSection(titre: cat.nom.isEmpty ? "Sans nom" : cat.nom, clients: clients))
+            }
+        }
+        // Clients sans catégorie
+        let sansCategorie = orders.filter { o in
+            o.estValide && (o.categorieID == nil || !categories.contains(where: { $0.id == o.categorieID }))
+        }.sorted { $0.nom.localizedCompare($1.nom) == .orderedAscending }
+        if !sansCategorie.isEmpty {
+            sections.append(CatSection(titre: categories.isEmpty ? "" : "Sans catégorie", clients: sansCategorie))
+        }
+
+        let renderer = UIGraphicsPDFRenderer(bounds: CGRect(x: 0, y: 0, width: pageWidth, height: pageHeight))
+
+        let data = renderer.pdfData { context in
+            var y: CGFloat = margin
+
+            func checkPage(_ needed: CGFloat = 30) {
+                if y > pageHeight - margin - needed {
+                    context.beginPage()
+                    y = margin
+                }
+            }
+
+            func drawLine(_ text: String, attr: [NSAttributedString.Key: Any], indent: CGFloat = 0) {
+                let nsText = text as NSString
+                let size = nsText.boundingRect(with: CGSize(width: contentWidth - indent, height: 200), options: .usesLineFragmentOrigin, attributes: attr, context: nil)
+                checkPage(size.height + 4)
+                nsText.draw(in: CGRect(x: margin + indent, y: y, width: contentWidth - indent, height: size.height + 2), withAttributes: attr)
+                y += size.height + 4
+            }
+
+            func drawCategoryBanner(_ text: String) {
+                checkPage(28)
+                let bannerRect = CGRect(x: margin, y: y, width: contentWidth, height: 22)
+                UIColor(red: 0.05, green: 0.30, blue: 0.50, alpha: 1).setFill()
+                UIBezierPath(roundedRect: bannerRect, cornerRadius: 6).fill()
+                let nsText = text.uppercased() as NSString
+                nsText.draw(in: CGRect(x: margin + 10, y: y + 3, width: contentWidth - 20, height: 18), withAttributes: catAttr)
+                y += 28
+            }
+
+            func drawSeparator() {
+                checkPage(8)
+                let path = UIBezierPath()
+                path.move(to: CGPoint(x: margin, y: y))
+                path.addLine(to: CGPoint(x: pageWidth - margin, y: y))
+                UIColor.lightGray.setStroke()
+                path.lineWidth = 0.5
+                path.stroke()
+                y += 6
+            }
+
+            context.beginPage()
+
+            // Titre
+            let df = DateFormatter()
+            df.dateStyle = .short
+            df.locale = Locale(identifier: "fr_FR")
+            drawLine("FICHE DE DISTRIBUTION — \(titreCampagne.uppercased())", attr: titleAttr)
+            drawLine("Date : \(df.string(from: Date()))  —  \(nombreParticipants) client\(nombreParticipants > 1 ? "s" : "")  —  \(formatQte(totalQuantite))", attr: bodyAttr)
+            y += 8
+
+            for section in sections {
+                if !section.titre.isEmpty {
+                    drawCategoryBanner(section.titre)
+                }
+
+                for client in section.clients {
+                    // Estimer la hauteur nécessaire pour garder le client groupé
+                    let lignesCount = client.lignes.filter { $0.quantite > 0 }.count
+                    checkPage(CGFloat(lignesCount + 2) * 16)
+
+                    // Nom du client + checkbox
+                    drawLine("☐  \(client.nom.isEmpty ? "Sans nom" : client.nom)", attr: clientAttr, indent: 4)
+
+                    for ligne in client.lignes where ligne.quantite > 0 {
+                        var detail = "\(formatQte(ligne.quantite))  \(ligne.variante)"
+                        if let t = ligne.taille, !t.isEmpty { detail += "  ·  \(t)" }
+                        if let c = ligne.couleur, !c.isEmpty { detail += "  ·  \(c)" }
+                        drawLine(detail, attr: bodyAttr, indent: 24)
+                    }
+
+                    if let total = client.total(variantes: variantes) {
+                        drawLine("→ \(String(format: "%.2f €", total))", attr: totalAttr, indent: 24)
+                    }
+                    y += 2
+                }
+
+                drawSeparator()
+            }
+
+            // Résumé en bas
+            y += 4
+            drawLine("TOTAL : \(formatQte(totalQuantite))  —  \(String(format: "%.2f €", totalGeneral))", attr: titleAttr)
+        }
+
+        return data
+    }
+
+    func exporterDistribution() -> URL? {
+        let data = genererPDFDistribution()
+        let df = DateFormatter()
+        df.dateFormat = "yyyy-MM-dd"
+        let sanitized = titreCampagne.replacingOccurrences(of: " ", with: "_")
+        let nomFichier = "Distribution_\(sanitized)_\(df.string(from: Date())).pdf"
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent(nomFichier)
+        do {
+            try data.write(to: url)
+            return url
+        } catch {
+            return nil
+        }
+    }
+
     func remiseAZero() {
         for i in orders.indices {
             orders[i].remiseAZero()

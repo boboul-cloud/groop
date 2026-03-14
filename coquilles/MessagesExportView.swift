@@ -83,6 +83,7 @@ struct MessagesExportView: View {
                     finalisationSection
                     exportSection
                     bonCommandeSection
+                    distributionSection
                     pageWebSection
                     messageGroupeSection
                     sauvegardeSection
@@ -314,6 +315,47 @@ struct MessagesExportView: View {
             ) {
                 if let url = store.exporterBonCommande(afficherPrix: false, afficherClients: false) {
                     previewURL = url
+                }
+            }
+        }
+        .padding()
+        .background(.ultraThinMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 20))
+    }
+
+    private var distributionSection: some View {
+        VStack(spacing: 12) {
+            HStack {
+                Image(systemName: "truck.box.fill")
+                    .foregroundStyle(.ocean)
+                Text("Fiche de distribution")
+                    .font(.headline)
+                    .foregroundStyle(.ocean)
+                Spacer()
+            }
+
+            Text("Liste par cat\u{00e9}gorie et par client pour la distribution, avec cases \u{00e0} cocher")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            BonCommandeButton(
+                icon: "doc.text.magnifyingglass",
+                label: "Consulter",
+                style: .outline
+            ) {
+                if let url = store.exporterDistribution() {
+                    previewURL = url
+                }
+            }
+
+            BonCommandeButton(
+                icon: "square.and.arrow.up",
+                label: "Partager",
+                style: .filled
+            ) {
+                if let url = store.exporterDistribution() {
+                    shareItem = IdentifiableURL(url: url)
                 }
             }
         }
