@@ -18,8 +18,8 @@ struct coquillesApp: App {
             ContentView(store: store)
                 .tint(.ocean)
                 .onOpenURL { url in
-                    if store.importerCommandeDepuisURL(url) {
-                        importedName = store.orders.last?.nom ?? "Client"
+                    if let name = store.importerCommandeDepuisURL(url) {
+                        importedName = name
                         showImportConfirm = true
                     }
                 }

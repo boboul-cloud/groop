@@ -781,15 +781,15 @@ class OrderStore: ObservableObject {
          .replacingOccurrences(of: "\n", with: "\\n")
     }
 
-    /// Importe une commande depuis les données encodées dans un deep link
-    func importerCommandeDepuisURL(_ url: URL) -> Bool {
-        guard url.scheme == "coquilles", url.host == "order" else { return false }
+    /// Importe une commande depuis les données encodées dans un deep link. Retourne le nom du client importé, ou nil en cas d'échec.
+    func importerCommandeDepuisURL(_ url: URL) -> String? {
+        guard url.scheme == "coquilles", url.host == "order" else { return nil }
         guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
               let dataParam = components.queryItems?.first(where: { $0.name == "d" })?.value,
               let decoded = Data(base64Encoded: dataParam),
               let jsonString = String(data: decoded, encoding: .utf8),
               let jsonData = jsonString.data(using: .utf8)
-        else { return false }
+        else { return nil }
 
         struct CommandeWeb: Decodable {
             let n: String       // nom
@@ -803,7 +803,7 @@ class OrderStore: ObservableObject {
             let c: String?      // couleur
         }
 
-        guard let commande = try? JSONDecoder().decode(CommandeWeb.self, from: jsonData) else { return false }
+        guard let commande = try? JSONDecoder().decode(CommandeWeb.self, from: jsonData) else { return nil }
 
         // Vérifier si un client avec ce téléphone existe déjà
         let tel = commande.p ?? ""
@@ -836,6 +836,6 @@ class OrderStore: ObservableObject {
             orders.append(order)
         }
         save()
-        return true
+        return commande.n.isEmpty ? "Client" : commande.n
     }
 }
