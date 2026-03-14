@@ -17,6 +17,7 @@ struct CampagneData: Codable {
     var variantes: [Variante]
     var categories: [CategorieClient]
     var orders: [Order]
+    var telephoneVendeur: String?
 }
 
 class OrderStore: ObservableObject {
@@ -772,7 +773,8 @@ class OrderStore: ObservableObject {
             uniteQuantite: uniteQuantite,
             variantes: variantes,
             categories: categories,
-            orders: orders
+            orders: orders,
+            telephoneVendeur: telephoneVendeur
         )
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
@@ -805,6 +807,7 @@ class OrderStore: ObservableObject {
         variantes = campagne.variantes
         categories = campagne.categories
         orders = campagne.orders
+        telephoneVendeur = campagne.telephoneVendeur ?? ""
         save()
         return true
     }
@@ -823,7 +826,8 @@ class OrderStore: ObservableObject {
             uniteQuantite: uniteQuantite,
             variantes: variantes,
             categories: categories,
-            orders: orders
+            orders: orders,
+            telephoneVendeur: telephoneVendeur
         )
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
