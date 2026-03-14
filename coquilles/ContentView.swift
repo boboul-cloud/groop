@@ -99,5 +99,5 @@ struct ShareSheet: UIViewControllerRepresentable {
 }
 
 #Preview {
-    ContentView()
+    ContentView(store: OrderStore())
 }
