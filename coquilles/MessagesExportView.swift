@@ -29,6 +29,7 @@ struct MessagesExportView: View {
     @State private var showConfirmCharger: String? = nil
     @State private var showSauvegardeFeedback = false
     @State private var showConfirmSupprimer: String? = nil
+    @State private var showWebLinkCopied = false
 
     enum ClientSelectionType {
         case commande, arrivee
@@ -225,46 +226,53 @@ struct MessagesExportView: View {
                             Spacer()
                         }
 
-                        Text("Générez une page web que vos clients peuvent ouvrir pour passer commande. Les commandes sont importées automatiquement dans l'app.")
+                        Text("Partagez un lien web que vos clients ouvrent dans leur navigateur pour passer commande. La commande vous est envoyée par SMS.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                             .frame(maxWidth: .infinity, alignment: .leading)
 
-                        Button {
-                            if let url = store.genererPageWebCommande() {
-                                previewURL = url
+                        if let url = store.genererLienWebCommande() {
+                            Button {
+                                UIPasteboard.general.string = url.absoluteString
+                                showWebLinkCopied = true
+                            } label: {
+                                HStack {
+                                    Image(systemName: "doc.on.doc")
+                                    Text("Copier le lien")
+                                        .fontWeight(.medium)
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding()
+                                .background(Color.ocean.opacity(0.1))
+                                .foregroundStyle(.ocean)
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
                             }
-                        } label: {
-                            HStack {
-                                Image(systemName: "eye")
-                                Text("Prévisualiser la page")
-                                    .fontWeight(.medium)
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color.ocean.opacity(0.1))
-                            .foregroundStyle(.ocean)
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
-                        }
-                        .disabled(store.variantes.isEmpty)
 
-                        Button {
-                            if let url = store.genererPageWebCommande() {
+                            Button {
                                 shareItem = IdentifiableURL(url: url)
+                            } label: {
+                                HStack {
+                                    Image(systemName: "square.and.arrow.up")
+                                    Text("Partager le lien")
+                                        .fontWeight(.medium)
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding()
+                                .background(LinearGradient.oceanGradient)
+                                .foregroundStyle(.white)
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
                             }
-                        } label: {
-                            HStack {
-                                Image(systemName: "square.and.arrow.up")
-                                Text("Partager la page web")
-                                    .fontWeight(.medium)
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(LinearGradient.oceanGradient)
-                            .foregroundStyle(.white)
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
+
+                            Text(url.absoluteString)
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(2)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        } else {
+                            Text("Ajoutez des variantes dans la configuration pour générer le lien.")
+                                .font(.caption)
+                                .foregroundStyle(.tertiary)
                         }
-                        .disabled(store.variantes.isEmpty)
                     }
                     .padding()
                     .background(.ultraThinMaterial)
@@ -582,6 +590,11 @@ struct MessagesExportView: View {
                 Button("OK") {}
             } message: {
                 Text("La campagne « \(nomSauvegarde) » a été sauvegardée.")
+            }
+            .alert("Lien copié ✓", isPresented: $showWebLinkCopied) {
+                Button("OK") {}
+            } message: {
+                Text("Le lien de commande a été copié dans le presse-papiers.")
             }
             .sheet(isPresented: $showChargerCampagne) {
                 CampagneListView(store: store)

@@ -754,224 +754,28 @@ class OrderStore: ObservableObject {
 
     // MARK: - Génération page web commande
 
-    func genererPageWebCommande() -> URL? {
-        let variantesJSON = variantes.filter { !$0.nom.isEmpty }.map { v -> String in
-            let tailles = v.tailles.map { "\"\(escaperJS($0))\"" }.joined(separator: ",")
-            let couleurs = v.couleurs.map { "\"\(escaperJS($0))\"" }.joined(separator: ",")
-            return "{nom:\"\(escaperJS(v.nom))\",prix:\(v.prix),tailles:[\(tailles)],couleurs:[\(couleurs)]}"
-        }.joined(separator: ",")
+    /// URL de base de la page GitHub Pages
+    private let pagesBaseURL = "https://boboul-cloud.github.io/coquilles/"
 
-        let unite = escaperJS(uniteQuantite.rawValue)
-        let titre = escaperJS(titreCampagne)
-        let increment = uniteQuantite == .kg ? "0.5" : "1"
-        let formatQteJS = uniteQuantite == .kg ? "q.toFixed(1)" : "q.toFixed(0)"
-
-        let html = """
-        <!DOCTYPE html>
-        <html lang="fr">
-        <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>\(titre) — Commande</title>
-        <style>
-        :root{--ocean:#1B6B93;--seafoam:#4ECDC4;--sand:#F7F3E9;--coral:#FF6B6B}
-        *{box-sizing:border-box;margin:0;padding:0}
-        body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:var(--sand);color:#333;min-height:100vh}
-        .header{background:linear-gradient(135deg,var(--ocean),#2a9d8f);color:#fff;padding:24px 16px;text-align:center}
-        .header h1{font-size:1.5em;margin-bottom:4px}
-        .header p{opacity:.85;font-size:.9em}
-        .container{max-width:600px;margin:0 auto;padding:16px}
-        .card{background:#fff;border-radius:16px;padding:16px;margin-bottom:16px;box-shadow:0 2px 8px rgba(0,0,0,.08)}
-        .card h2{font-size:1.1em;color:var(--ocean);margin-bottom:12px;display:flex;align-items:center;gap:8px}
-        label{display:block;font-weight:500;margin-bottom:6px;font-size:.9em}
-        input[type=text],input[type=tel]{width:100%;padding:10px 12px;border:1.5px solid #ddd;border-radius:10px;font-size:1em;transition:border-color .2s}
-        input:focus{outline:none;border-color:var(--ocean)}
-        .variante{border:1.5px solid #e8e8e8;border-radius:14px;padding:14px;margin-bottom:12px;transition:border-color .2s}
-        .variante.active{border-color:var(--seafoam);background:rgba(78,205,196,.05)}
-        .var-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
-        .var-name{font-weight:600;font-size:1.05em}
-        .var-price{color:var(--ocean);font-weight:600;font-size:.95em}
-        .options{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
-        .chip{padding:6px 14px;border-radius:20px;border:1.5px solid #ddd;background:#fff;font-size:.85em;cursor:pointer;transition:all .2s;user-select:none}
-        .chip.selected{background:var(--seafoam);color:#fff;border-color:var(--seafoam)}
-        .qty-row{display:flex;align-items:center;gap:10px;margin-top:8px}
-        .qty-btn{width:36px;height:36px;border-radius:50%;border:none;font-size:1.2em;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s}
-        .qty-btn.minus{background:var(--coral);color:#fff}
-        .qty-btn.plus{background:var(--seafoam);color:#fff}
-        .qty-btn:disabled{opacity:.3}
-        .qty-val{font-size:1.1em;font-weight:600;min-width:50px;text-align:center}
-        .submit-btn{width:100%;padding:14px;background:linear-gradient(135deg,var(--ocean),#2a9d8f);color:#fff;border:none;border-radius:14px;font-size:1.05em;font-weight:600;cursor:pointer;transition:transform .1s}
-        .submit-btn:active{transform:scale(.97)}
-        .submit-btn:disabled{opacity:.4}
-        .recap{background:rgba(78,205,196,.08);border-radius:12px;padding:12px;margin-bottom:12px;font-size:.9em}
-        .recap-line{display:flex;justify-content:space-between;padding:4px 0}
-        .total-line{font-weight:700;color:var(--ocean);border-top:1px solid #ddd;margin-top:6px;padding-top:6px}
-        .success{text-align:center;padding:40px 16px}
-        .success h2{color:var(--seafoam);margin-bottom:8px}
-        .hidden{display:none}
-        .field-group{margin-bottom:12px}
-        .attr-label{font-size:.8em;color:#888;margin-bottom:4px;font-weight:500}
-        </style>
-        </head>
-        <body>
-        <div class="header">
-          <h1>\(titre)</h1>
-          <p>Formulaire de commande</p>
-        </div>
-        <div class="container" id="formSection">
-          <div class="card">
-            <h2>📋 Vos coordonnées</h2>
-            <div class="field-group">
-              <label for="nom">Nom</label>
-              <input type="text" id="nom" placeholder="Votre nom" autocomplete="name">
-            </div>
-            <div class="field-group">
-              <label for="tel">Téléphone</label>
-              <input type="tel" id="tel" placeholder="06 12 34 56 78" autocomplete="tel">
-            </div>
-          </div>
-          <div class="card">
-            <h2>🛒 Votre commande</h2>
-            <div id="variantes"></div>
-          </div>
-          <div id="recapCard" class="card hidden">
-            <h2>📊 Récapitulatif</h2>
-            <div id="recap" class="recap"></div>
-          </div>
-          <button class="submit-btn" id="submitBtn" disabled onclick="soumettre()">Envoyer la commande</button>
-        </div>
-        <div class="container hidden" id="successSection">
-          <div class="card success">
-            <h2>✅ Commande envoyée !</h2>
-            <p>Votre commande a bien été transmise.</p>
-          </div>
-        </div>
-        <script>
-        const VARIANTES=[\(variantesJSON)];
-        const UNITE="\(unite)";
-        const INC=\(increment);
-        let state=VARIANTES.map(v=>({nom:v.nom,taille:null,couleur:null,quantite:0}));
-
-        function init(){
-          const c=document.getElementById("variantes");
-          VARIANTES.forEach((v,i)=>{
-            let h="<div class='variante' id='var_"+i+"'>";
-            h+="<div class='var-header'><span class='var-name'>"+v.nom+"</span><span class='var-price'>"+v.prix.toFixed(2)+" €/"+UNITE+"</span></div>";
-            if(v.tailles.length){
-              h+="<div class='attr-label'>Taille</div><div class='options'>";
-              v.tailles.forEach(t=>{h+="<div class='chip' onclick='selTaille("+i+",this,\\""+t+"\\")'>"+t+"</div>";});
-              h+="</div>";
-            }
-            if(v.couleurs.length){
-              h+="<div class='attr-label'>Couleur</div><div class='options'>";
-              v.couleurs.forEach(cl=>{h+="<div class='chip' onclick='selCouleur("+i+",this,\\""+cl+"\\")'>"+cl+"</div>";});
-              h+="</div>";
-            }
-            h+="<div class='qty-row'><button class='qty-btn minus' onclick='chgQty("+i+",-1)'>−</button>";
-            h+="<span class='qty-val' id='qty_"+i+"'>0 "+UNITE+"</span>";
-            h+="<button class='qty-btn plus' onclick='chgQty("+i+",1)'>+</button></div></div>";
-            c.innerHTML+=h;
-          });
+    /// Génère un lien web vers la page de commande hébergée sur GitHub Pages
+    func genererLienWebCommande() -> URL? {
+        let variantesData = variantes.filter { !$0.nom.isEmpty }.map { v -> [String: Any] in
+            var dict: [String: Any] = ["n": v.nom, "x": v.prix]
+            if !v.tailles.isEmpty { dict["ta"] = v.tailles }
+            if !v.couleurs.isEmpty { dict["co"] = v.couleurs }
+            return dict
         }
+        let config: [String: Any] = [
+            "t": titreCampagne,
+            "u": uniteQuantite.rawValue,
+            "v": variantesData
+        ]
+        guard let jsonData = try? JSONSerialization.data(withJSONObject: config),
+              let jsonString = String(data: jsonData, encoding: .utf8) else { return nil }
 
-        function selTaille(i,el,t){
-          state[i].taille=state[i].taille===t?null:t;
-          el.parentElement.querySelectorAll(".chip").forEach(c=>c.classList.remove("selected"));
-          if(state[i].taille)el.classList.add("selected");
-          update();
-        }
-        function selCouleur(i,el,cl){
-          state[i].couleur=state[i].couleur===cl?null:cl;
-          el.parentElement.querySelectorAll(".chip").forEach(c=>c.classList.remove("selected"));
-          if(state[i].couleur)el.classList.add("selected");
-          update();
-        }
-        function chgQty(i,d){
-          state[i].quantite=Math.max(0,+(state[i].quantite+d*INC).toFixed(2));
-          update();
-        }
-        function fmtQte(q){return \(formatQteJS)+" "+UNITE;}
-        function update(){
-          let total=0,any=false,recapH="";
-          VARIANTES.forEach((v,i)=>{
-            const el=document.getElementById("var_"+i);
-            const q=state[i].quantite;
-            document.getElementById("qty_"+i).textContent=fmtQte(q);
-            if(q>0){
-              el.classList.add("active");any=true;
-              const st=v.prix*q;total+=st;
-              let desc=v.nom;
-              if(state[i].taille)desc+=" — "+state[i].taille;
-              if(state[i].couleur)desc+=" — "+state[i].couleur;
-              recapH+="<div class='recap-line'><span>"+desc+" × "+fmtQte(q)+"</span><span>"+st.toFixed(2)+" €</span></div>";
-            } else {
-              el.classList.remove("active");
-            }
-          });
-          const rc=document.getElementById("recapCard");
-          if(any){
-            recapH+="<div class='recap-line total-line'><span>Total</span><span>"+total.toFixed(2)+" €</span></div>";
-            document.getElementById("recap").innerHTML=recapH;
-            rc.classList.remove("hidden");
-          } else {
-            rc.classList.add("hidden");
-          }
-          const nom=document.getElementById("nom").value.trim();
-          document.getElementById("submitBtn").disabled=!(any&&nom);
-        }
-        document.getElementById("nom").addEventListener("input",update);
-        document.getElementById("tel").addEventListener("input",update);
-
-        function soumettre(){
-          const nom=document.getElementById("nom").value.trim();
-          const tel=document.getElementById("tel").value.trim();
-          const lignes=[];
-          state.forEach((s,i)=>{
-            if(s.quantite>0){
-              const l={v:s.nom,q:s.quantite};
-              if(s.taille)l.t=s.taille;
-              if(s.couleur)l.c=s.couleur;
-              lignes.push(l);
-            }
-          });
-          const data=JSON.stringify({n:nom,p:tel,l:lignes});
-          const encoded=btoa(unescape(encodeURIComponent(data)));
-          const url="coquilles://order?d="+encodeURIComponent(encoded);
-
-          // Essayer d'ouvrir le lien deep-link
-          window.location.href=url;
-
-          // Fallback : proposer d'envoyer par SMS
-          setTimeout(()=>{
-            const recap=lignes.map(l=>{
-              let d=l.v;if(l.t)d+=" "+l.t;if(l.c)d+=" "+l.c;
-              return d+" x"+fmtQte(l.q);
-            }).join(", ");
-            const msg="Commande "+nom+(tel?" ("+tel+")":"")+" : "+recap;
-            const smsLink="sms:?&body="+encodeURIComponent(url);
-            if(confirm("Si l'app ne s'est pas ouverte, voulez-vous envoyer la commande par SMS ?")){
-              window.location.href=smsLink;
-            }
-          },1500);
-
-          document.getElementById("formSection").classList.add("hidden");
-          document.getElementById("successSection").classList.remove("hidden");
-        }
-        init();
-        </script>
-        </body>
-        </html>
-        """
-
-        let sanitized = titreCampagne.replacingOccurrences(of: " ", with: "_")
-        let nomFichier = "Commande_\(sanitized).html"
-        let url = FileManager.default.temporaryDirectory.appendingPathComponent(nomFichier)
-        do {
-            try html.write(to: url, atomically: true, encoding: .utf8)
-            return url
-        } catch {
-            return nil
-        }
+        let base64 = Data(jsonString.utf8).base64EncodedString()
+        let urlString = pagesBaseURL + "#" + base64
+        return URL(string: urlString)
     }
 
     private func escaperJS(_ s: String) -> String {
