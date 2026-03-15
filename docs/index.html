@@ -258,11 +258,11 @@ input:focus{outline:none;border-color:var(--ocean)}
     }).join(", ");
     var smsBody = "Commande " + nom + (tel ? " ("+tel+")" : "") + " : " + recap + "\n" + deepUrl;
 
-    if (navigator.share) {
-      navigator.share({ text: smsBody }).catch(function(){});
-    } else {
-      var smsHref = "sms:" + (TEL_VENDEUR || "") + "&body=" + encodeURIComponent(smsBody);
+    if (TEL_VENDEUR) {
+      var smsHref = "sms:" + TEL_VENDEUR + "&body=" + encodeURIComponent(smsBody);
       window.location.href = smsHref;
+    } else if (navigator.share) {
+      navigator.share({ text: smsBody }).catch(function(){});
     }
   };
 
