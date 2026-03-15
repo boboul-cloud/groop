@@ -16,6 +16,7 @@ struct PlusReglageView: View {
     @State private var showImportClients = false
     @State private var importClientsCount = 0
     @State private var showImportClientsFeedback = false
+    @State private var exportClientsShareItem: IdentifiableURL? = nil
 
     private let confidentialiteURL = URL(string: "https://boboul-cloud.github.io/coquilles/confidentialite.html")!
     private let conditionsURL = URL(string: "https://boboul-cloud.github.io/coquilles/conditions.html")!
@@ -66,6 +67,9 @@ struct PlusReglageView: View {
         }
         .alert("\(importClientsCount) client\(importClientsCount > 1 ? "s" : "") importé\(importClientsCount > 1 ? "s" : "") ✓", isPresented: $showImportClientsFeedback) {
             Button("OK") {}
+        }
+        .sheet(item: $exportClientsShareItem) { item in
+            ShareSheet(activityItems: [item.url])
         }
     }
 
@@ -135,6 +139,32 @@ struct PlusReglageView: View {
                 .foregroundStyle(.ocean)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
             }
+
+            Button {
+                if let url = store.exporterClientsFichier() {
+                    exportClientsShareItem = IdentifiableURL(url: url)
+                }
+            } label: {
+                HStack {
+                    Image(systemName: "person.crop.circle.badge.arrow.right")
+                    Text("Exporter la liste de clients")
+                        .fontWeight(.medium)
+                    Spacer()
+                    Text("\(store.orders.filter { !$0.nom.isEmpty }.count)")
+                        .font(.caption)
+                        .foregroundStyle(.ocean)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(Color.ocean.opacity(0.15))
+                        .clipShape(Capsule())
+                }
+                .frame(maxWidth: .infinity)
+                .padding()
+                .background(Color.ocean.opacity(0.1))
+                .foregroundStyle(.ocean)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+            .disabled(store.orders.isEmpty)
         }
         .padding()
         .background(.ultraThinMaterial)

@@ -182,6 +182,30 @@ class OrderStore: ObservableObject {
         save()
     }
 
+    /// Exporte la liste des clients au format texte (Nom;téléphone;catégorie).
+    /// Même format que l'import pour compatibilité bidirectionnelle.
+    func exporterClientsFichier() -> URL? {
+        var lignes: [String] = []
+        for order in orders {
+            let nom = order.nom
+            guard !nom.isEmpty else { continue }
+            let tel = order.telephone
+            let catNom = categories.first(where: { $0.id == order.categorieID })?.nom ?? ""
+            lignes.append([nom, tel, catNom].joined(separator: ";"))
+        }
+        guard !lignes.isEmpty else { return nil }
+        let contenu = lignes.joined(separator: "\n")
+        let tmpDir = FileManager.default.temporaryDirectory
+        let fileName = titreCampagne.isEmpty ? "clients" : titreCampagne.replacingOccurrences(of: " ", with: "_")
+        let url = tmpDir.appendingPathComponent("\(fileName)_clients.txt")
+        do {
+            try contenu.write(to: url, atomically: true, encoding: .utf8)
+            return url
+        } catch {
+            return nil
+        }
+    }
+
     /// Importe des clients depuis un fichier texte (un par ligne).
     /// Format : "Nom;téléphone;catégorie" — téléphone et catégorie optionnels.
     /// Séparateur accepté : ";" ou ","
