@@ -19,7 +19,7 @@
 | URL de la politique de confidentialité | https://boboul-cloud.github.io/groop/confidentialite.html |
 | URL des conditions d'utilisation       | https://boboul-cloud.github.io/groop/conditions.html     |
 | URL de support                         | https://boboul-cloud.github.io/groop/support.html        |
-| URL marketing (optionnel)              | https://boboul-cloud.github.io/groop/support.html        |
+| URL marketing (optionnel)              | https://boboul-cloud.github.io/groop/promo.html          |
 
 ---
 

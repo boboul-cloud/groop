@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Groop — Commandes groupées faciles</title>
+<meta name="description" content="Groop simplifie vos achats groupés : commandes, paiements, exports PDF et page web de commande. 100 % hors ligne et privé.">
+<meta property="og:title" content="Groop — Commandes groupées faciles">
+<meta property="og:description" content="Gérez vos achats groupés de A à Z. Gratuit sur iPhone.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://boboul-cloud.github.io/groop/promo.html">
+<style>
+:root{--ocean:#1B6B93;--seafoam:#4ECDC4;--sand:#F7F3E9;--coral:#FF6B6B;--dark:#1a1a2e}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:#333;overflow-x:hidden}
+
+/* Hero */
+.hero{background:linear-gradient(135deg,var(--ocean) 0%,#2a9d8f 50%,var(--seafoam) 100%);color:#fff;text-align:center;padding:60px 20px 50px;position:relative;overflow:hidden}
+.hero::after{content:"";position:absolute;bottom:-2px;left:0;right:0;height:40px;background:var(--sand);border-radius:50% 50% 0 0/100% 100% 0 0}
+.hero-icon{width:100px;height:100px;background:#fff;border-radius:24px;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;box-shadow:0 8px 32px rgba(0,0,0,.15)}
+.hero-icon span{font-size:52px;font-weight:800;background:linear-gradient(135deg,var(--ocean),var(--seafoam));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero h1{font-size:2.4em;margin-bottom:6px;letter-spacing:-.5px}
+.hero .subtitle{font-size:1.15em;opacity:.9;margin-bottom:24px}
+.hero .tagline{font-size:1em;opacity:.8;max-width:480px;margin:0 auto 30px;line-height:1.5}
+.app-store-btn{display:inline-block;background:#000;color:#fff;padding:14px 28px;border-radius:14px;text-decoration:none;font-weight:600;font-size:1em;transition:transform .15s,box-shadow .15s}
+.app-store-btn:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,.25)}
+.app-store-btn svg{vertical-align:middle;margin-right:8px}
+.badge-row{display:flex;gap:12px;justify-content:center;margin-top:16px;flex-wrap:wrap}
+.badge{background:rgba(255,255,255,.15);backdrop-filter:blur(8px);padding:6px 14px;border-radius:20px;font-size:.85em;font-weight:500}
+
+/* Sections */
+.section{max-width:800px;margin:0 auto;padding:40px 20px}
+.section-title{font-size:1.6em;color:var(--ocean);text-align:center;margin-bottom:8px}
+.section-sub{text-align:center;color:#777;font-size:.95em;margin-bottom:32px}
+
+/* Features grid */
+.features{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}
+.feature{background:#fff;border-radius:16px;padding:20px;box-shadow:0 2px 12px rgba(0,0,0,.06);transition:transform .2s,box-shadow .2s}
+.feature:hover{transform:translateY(-4px);box-shadow:0 8px 24px rgba(0,0,0,.1)}
+.feature-icon{font-size:2em;margin-bottom:10px}
+.feature h3{font-size:1.05em;color:var(--ocean);margin-bottom:6px}
+.feature p{font-size:.9em;line-height:1.5;color:#555}
+
+/* How it works */
+.steps-bg{background:#fff}
+.steps{display:flex;flex-direction:column;gap:20px;max-width:540px;margin:0 auto}
+.step{display:flex;gap:16px;align-items:flex-start}
+.step-num{flex-shrink:0;width:40px;height:40px;background:linear-gradient(135deg,var(--ocean),var(--seafoam));color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.1em}
+.step-text h4{font-size:1em;color:var(--ocean);margin-bottom:2px}
+.step-text p{font-size:.9em;color:#555;line-height:1.5}
+
+/* Privacy */
+.privacy-banner{background:linear-gradient(135deg,var(--dark),#16213e);color:#fff;text-align:center;padding:40px 20px;border-radius:20px;margin:0 20px}
+.privacy-banner h2{font-size:1.5em;margin-bottom:10px}
+.privacy-banner p{opacity:.85;max-width:500px;margin:0 auto;line-height:1.6;font-size:.95em}
+.privacy-pills{display:flex;gap:10px;justify-content:center;margin-top:18px;flex-wrap:wrap}
+.privacy-pill{background:rgba(78,205,196,.2);border:1px solid rgba(78,205,196,.3);padding:6px 16px;border-radius:20px;font-size:.85em}
+
+/* Pro */
+.pro-section{background:linear-gradient(135deg,#fff5e6,#fff0d6);border-radius:20px;padding:32px 24px;margin:0 20px;text-align:center}
+.pro-section h2{color:var(--coral);font-size:1.4em;margin-bottom:8px}
+.pro-section .price{font-size:2em;font-weight:800;color:var(--ocean);margin:12px 0 4px}
+.pro-section .price-sub{color:#888;font-size:.85em;margin-bottom:16px}
+.pro-features{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:20px}
+.pro-pill{background:#fff;padding:8px 16px;border-radius:12px;font-size:.9em;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+
+/* CTA */
+.cta{text-align:center;padding:50px 20px 30px}
+.cta h2{font-size:1.6em;color:var(--ocean);margin-bottom:16px}
+.cta-btn{display:inline-block;background:linear-gradient(135deg,var(--ocean),#2a9d8f);color:#fff;padding:16px 36px;border-radius:16px;text-decoration:none;font-weight:700;font-size:1.1em;transition:transform .15s,box-shadow .15s}
+.cta-btn:hover{transform:translateY(-2px);box-shadow:0 6px 24px rgba(27,107,147,.3)}
+
+/* Footer */
+.footer{text-align:center;padding:30px 20px;background:var(--sand)}
+.footer-links{margin-bottom:10px}
+.footer-links a{color:var(--ocean);text-decoration:none;margin:0 10px;font-size:.9em}
+.footer-links a:hover{text-decoration:underline}
+.footer p{font-size:.8em;color:#999}
+
+@media(max-width:480px){
+  .hero h1{font-size:1.8em}
+  .hero-icon{width:80px;height:80px;border-radius:20px}
+  .hero-icon span{font-size:40px}
+  .features{grid-template-columns:1fr}
+  .privacy-banner,.pro-section{margin:0 10px}
+}
+</style>
+</head>
+<body>
+
+<!-- Hero -->
+<div class="hero">
+  <div class="hero-icon"><span>G</span></div>
+  <h1>Groop</h1>
+  <p class="subtitle">Commandes group&eacute;es faciles</p>
+  <p class="tagline">G&eacute;rez vos achats group&eacute;s de A &agrave; Z&nbsp;: commandes, paiements, exports PDF et page web de commande. Tout reste sur votre iPhone.</p>
+  <a href="#" class="app-store-btn" id="appStoreLink">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+    T&eacute;l&eacute;charger sur l'App Store
+  </a>
+  <div class="badge-row">
+    <span class="badge">Gratuit</span>
+    <span class="badge">100 % hors ligne</span>
+    <span class="badge">iPhone</span>
+  </div>
+</div>
+
+<!-- Fonctionnalités -->
+<div class="section" style="background:var(--sand)">
+  <h2 class="section-title">Tout pour vos commandes group&eacute;es</h2>
+  <p class="section-sub">De la prise de commande &agrave; la livraison, en une seule app.</p>
+  <div class="features">
+    <div class="feature">
+      <div class="feature-icon">&#x1F4CB;</div>
+      <h3>Commandes</h3>
+      <p>Ajoutez vos clients et leurs commandes en quelques secondes. G&eacute;rez variantes, tailles et couleurs.</p>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">&#x1F4B0;</div>
+      <h3>Paiements</h3>
+      <p>Suivez les r&egrave;glements par ch&egrave;que ou esp&egrave;ces. Voyez en un clin d'&oelig;il qui a pay&eacute;.</p>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">&#x1F4CA;</div>
+      <h3>Tableau de bord</h3>
+      <p>Vue d'ensemble&nbsp;: quantit&eacute;s totales, montants, participants et d&eacute;tail par produit.</p>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">&#x1F4C4;</div>
+      <h3>Exports PDF</h3>
+      <p>R&eacute;capitulatif, bon de commande fournisseur, fiche de distribution avec cases &agrave; cocher.</p>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">&#x1F310;</div>
+      <h3>Page web de commande</h3>
+      <p>Partagez un lien&nbsp;: vos clients commandent depuis leur navigateur, vous recevez par SMS.</p>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">&#x1F4AC;</div>
+      <h3>Messages group&eacute;s</h3>
+      <p>Envoyez des SMS &agrave; tous vos clients ou &agrave; une s&eacute;lection en un tap.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Comment ça marche -->
+<div class="steps-bg">
+  <div class="section">
+    <h2 class="section-title">Comment &ccedil;a marche</h2>
+    <p class="section-sub">3 &eacute;tapes pour g&eacute;rer votre campagne</p>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-text">
+          <h4>Cr&eacute;ez votre campagne</h4>
+          <p>D&eacute;finissez vos produits, prix et options. Partagez le lien de commande &agrave; vos clients.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-text">
+          <h4>Collectez commandes &amp; paiements</h4>
+          <p>Les commandes arrivent par SMS ou ajoutez-les manuellement. Enregistrez les paiements au fur et &agrave; mesure.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-text">
+          <h4>Exportez &amp; distribuez</h4>
+          <p>G&eacute;n&eacute;rez vos PDF, passez commande au fournisseur et distribuez avec la fiche de distribution.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Vie privée -->
+<div class="section" style="background:var(--sand)">
+  <div class="privacy-banner">
+    <h2>&#x1F512; Vie priv&eacute;e avant tout</h2>
+    <p>Toutes vos donn&eacute;es restent sur votre iPhone. Aucun compte, aucun serveur, aucun tra&ccedil;age. Groop fonctionne enti&egrave;rement hors ligne.</p>
+    <div class="privacy-pills">
+      <span class="privacy-pill">Pas de compte</span>
+      <span class="privacy-pill">Pas de serveur</span>
+      <span class="privacy-pill">Pas de cookies</span>
+      <span class="privacy-pill">100 % local</span>
+    </div>
+  </div>
+</div>
+
+<!-- Pro -->
+<div class="section">
+  <div class="pro-section">
+    <h2>&#x1F451; Groop Pro</h2>
+    <p>D&eacute;bloquez tout le potentiel de Groop</p>
+    <div class="price">4,99 &euro;</div>
+    <p class="price-sub">Achat unique &mdash; pas d'abonnement</p>
+    <div class="pro-features">
+      <span class="pro-pill">&#x221E; Clients illimit&eacute;s</span>
+      <span class="pro-pill">&#x1F4C4; Exports PDF</span>
+      <span class="pro-pill">&#x1F4BE; Sauvegarde campagnes</span>
+      <span class="pro-pill">&#x1F4E5; Import de clients</span>
+    </div>
+    <p style="font-size:.85em;color:#888">La version gratuite permet jusqu'&agrave; 15 clients par campagne.</p>
+  </div>
+</div>
+
+<!-- CTA -->
+<div class="cta" style="background:var(--sand)">
+  <h2>Pr&ecirc;t &agrave; simplifier vos commandes group&eacute;es&nbsp;?</h2>
+  <a href="#" class="cta-btn" id="ctaLink">T&eacute;l&eacute;charger Groop gratuitement</a>
+</div>
+
+<!-- Footer -->
+<div class="footer">
+  <div class="footer-links">
+    <a href="support.html">Support</a>
+    <a href="confidentialite.html">Confidentialit&eacute;</a>
+    <a href="conditions.html">Conditions</a>
+  </div>
+  <p>&copy; 2026 Robert Oulhen. Tous droits r&eacute;serv&eacute;s.</p>
+</div>
+
+</body>
+</html>
