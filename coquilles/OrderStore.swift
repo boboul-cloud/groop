@@ -173,16 +173,6 @@ class OrderStore: ObservableObject {
     func ajouterCommande(categorieID: UUID? = nil) {
         var order = Order()
         order.categorieID = categorieID
-        // Pré-remplir avec les variantes configurées
-        for v in variantes where !v.nom.isEmpty {
-            let tailles = v.tailles.isEmpty ? [nil as String?] : v.tailles.map { Optional($0) }
-            let couleurs = v.couleurs.isEmpty ? [nil as String?] : v.couleurs.map { Optional($0) }
-            for taille in tailles {
-                for couleur in couleurs {
-                    order.lignes.append(LigneCommande(variante: v.nom, taille: taille, couleur: couleur))
-                }
-            }
-        }
         orders.append(order)
         save()
     }
