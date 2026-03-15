@@ -17,8 +17,8 @@ struct PlusReglageView: View {
     @State private var importClientsCount = 0
     @State private var showImportClientsFeedback = false
 
-    @State private var showConfidentialite = false
-    @State private var showConditions = false
+    private let confidentialiteURL = URL(string: "https://boboul-cloud.github.io/coquilles/confidentialite.html")!
+    private let conditionsURL = URL(string: "https://boboul-cloud.github.io/coquilles/conditions.html")!
 
     private var appVersion: String {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
@@ -154,15 +154,13 @@ struct PlusReglageView: View {
                 Spacer()
             }
 
-            Button {
-                showConfidentialite = true
-            } label: {
+            Link(destination: confidentialiteURL) {
                 HStack {
                     Image(systemName: "lock.shield")
                     Text("Politique de confidentialité")
                         .fontWeight(.medium)
                     Spacer()
-                    Image(systemName: "chevron.right")
+                    Image(systemName: "arrow.up.right.square")
                         .font(.caption)
                 }
                 .frame(maxWidth: .infinity)
@@ -172,15 +170,13 @@ struct PlusReglageView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 12))
             }
 
-            Button {
-                showConditions = true
-            } label: {
+            Link(destination: conditionsURL) {
                 HStack {
                     Image(systemName: "doc.text")
                     Text("Conditions d'utilisation")
                         .fontWeight(.medium)
                     Spacer()
-                    Image(systemName: "chevron.right")
+                    Image(systemName: "arrow.up.right.square")
                         .font(.caption)
                 }
                 .frame(maxWidth: .infinity)
@@ -193,86 +189,6 @@ struct PlusReglageView: View {
         .padding()
         .background(.ultraThinMaterial)
         .clipShape(RoundedRectangle(cornerRadius: 20))
-        .sheet(isPresented: $showConfidentialite) {
-            NavigationStack {
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 16) {
-                        Text("Politique de confidentialité")
-                            .font(.title2)
-                            .fontWeight(.bold)
-
-                        Text("Dernière mise à jour : mars 2026")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-
-                        Group {
-                            Text("Données collectées")
-                                .font(.headline)
-                            Text("Coquilles stocke toutes vos données localement sur votre appareil. Aucune donnée personnelle n'est transmise à des serveurs externes.")
-
-                            Text("Stockage local")
-                                .font(.headline)
-                            Text("Les commandes, noms de clients et numéros de téléphone sont enregistrés uniquement sur votre iPhone. Les sauvegardes JSON sont créées localement.")
-
-                            Text("SMS")
-                                .font(.headline)
-                            Text("L'envoi de SMS utilise l'application Messages native de votre appareil. Coquilles n'a pas accès au contenu des messages envoyés.")
-
-                            Text("Partage")
-                                .font(.headline)
-                            Text("Les fichiers PDF et JSON sont partagés uniquement à votre initiative via la feuille de partage iOS.")
-                        }
-                        .font(.body)
-                    }
-                    .padding()
-                }
-                .navigationTitle("Confidentialité")
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .cancellationAction) {
-                        Button("Fermer") { showConfidentialite = false }
-                    }
-                }
-            }
-        }
-        .sheet(isPresented: $showConditions) {
-            NavigationStack {
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 16) {
-                        Text("Conditions d'utilisation")
-                            .font(.title2)
-                            .fontWeight(.bold)
-
-                        Text("Dernière mise à jour : mars 2026")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-
-                        Group {
-                            Text("Utilisation")
-                                .font(.headline)
-                            Text("Coquilles est une application de gestion de commandes groupées destinée à un usage personnel. Vous êtes responsable des données que vous saisissez et partagez.")
-
-                            Text("Responsabilité")
-                                .font(.headline)
-                            Text("L'application est fournie \"en l'état\". Nous ne garantissons pas l'absence d'erreurs. Vérifiez toujours vos récapitulatifs avant de les partager.")
-
-                            Text("Propriété intellectuelle")
-                                .font(.headline)
-                            Text("L'application Coquilles et son contenu sont protégés par le droit d'auteur. Toute reproduction est interdite sans autorisation.")
-                        }
-                        .font(.body)
-                    }
-                    .padding()
-                }
-                .navigationTitle("Conditions")
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .cancellationAction) {
-                        Button("Fermer") { showConditions = false }
-                    }
-                }
-            }
-        }
     }
 
     // MARK: - Version et copyright
