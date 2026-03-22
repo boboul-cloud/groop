@@ -195,7 +195,7 @@ input:focus{outline:none;border-color:var(--ocean)}
     var html = "";
     VARIANTES.forEach(function(v, i){
       html += '<div class="variante" id="var_'+i+'">';
-      html += '<div class="var-header"><span class="var-name">'+esc(v.n)+'</span><span class="var-price">'+v.x.toFixed(2)+' &euro;/'+esc(UNITE)+'</span></div>';
+      html += '<div class="var-header"><span class="var-name">'+esc(v.n)+'</span><span class="var-price">'+v.x.toFixed(2)+' &euro;'+(UNITE==='kg'?'/kg':'')+'</span></div>';
 
       if (v.ta && v.ta.length) {
         // Une ligne quantité par taille
@@ -231,7 +231,7 @@ input:focus{outline:none;border-color:var(--ocean)}
         }
         var si1 = stateIndexFor(i, null);
         html += '<div class="qty-row"><button class="qty-btn minus" onclick="chgQty('+si1+',-1)">&minus;</button>';
-        html += '<span class="qty-val" id="qty_'+si1+'">0 '+esc(UNITE)+'</span>';
+        html += '<span class="qty-val" id="qty_'+si1+'">0</span>';
         html += '<button class="qty-btn plus" onclick="chgQty('+si1+',1)">+</button></div>';
       }
       html += '</div>';
@@ -247,7 +247,7 @@ input:focus{outline:none;border-color:var(--ocean)}
   }
 
   function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
-  function fmtQte(q){ return (UNITE==="kg" ? q.toFixed(1) : q.toFixed(0)) + " " + UNITE; }
+  function fmtQte(q){ return UNITE==="kg" ? q.toFixed(1)+" kg" : q.toFixed(0); }
 
   window.selCouleur = function(si, el, cl){
     state[si].couleur = state[si].couleur===cl ? null : cl;
