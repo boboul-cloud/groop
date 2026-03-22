@@ -31,6 +31,10 @@ input:focus{outline:none;border-color:var(--ocean)}
 .qty-btn.plus{background:var(--seafoam);color:#fff}
 .qty-btn:disabled{opacity:.3}
 .qty-val{font-size:1.1em;font-weight:600;min-width:50px;text-align:center}
+.size-line{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #f0f0f0}
+.size-line:last-child{border-bottom:none}
+.size-name{font-weight:500;min-width:60px;font-size:.95em}
+.size-price{font-size:.8em;color:var(--ocean);min-width:55px}
 .submit-btn{width:100%;padding:14px;background:linear-gradient(135deg,var(--ocean),#2a9d8f);color:#fff;border:none;border-radius:14px;font-size:1.05em;font-weight:600;cursor:pointer;transition:transform .1s}
 .submit-btn:active{transform:scale(.97)}
 .submit-btn:disabled{opacity:.4}
@@ -173,78 +177,123 @@ input:focus{outline:none;border-color:var(--ocean)}
   document.getElementById("formSection").classList.remove("hidden");
   document.getElementById("errorSection").classList.add("hidden");
 
-  var state = VARIANTES.map(function(v){ return {nom:v.n, taille:null, couleur:null, quantite:0}; });
+  // State : liste plate de lignes de commande
+  // Chaque ligne = {nom, taille (ou null), couleur (ou null), quantite, varIdx}
+  var state = [];
+  VARIANTES.forEach(function(v, i) {
+    if (v.ta && v.ta.length) {
+      v.ta.forEach(function(t) {
+        state.push({nom: v.n, taille: t, couleur: null, quantite: 0, varIdx: i});
+      });
+    } else {
+      state.push({nom: v.n, taille: null, couleur: null, quantite: 0, varIdx: i});
+    }
+  });
 
   function init(){
     var c = document.getElementById("variantes");
     var html = "";
     VARIANTES.forEach(function(v, i){
       html += '<div class="variante" id="var_'+i+'">';
-      html += '<div class="var-header"><span class="var-name">'+esc(v.n)+'</span><span class="var-price" id="price_'+i+'">'+v.x.toFixed(2)+' &euro;/'+esc(UNITE)+'</span></div>';
+      html += '<div class="var-header"><span class="var-name">'+esc(v.n)+'</span><span class="var-price">'+v.x.toFixed(2)+' &euro;/'+esc(UNITE)+'</span></div>';
+
       if (v.ta && v.ta.length) {
-        html += '<div class="attr-label">Taille</div><div class="options">';
-        v.ta.forEach(function(t){
-          var chipLabel = esc(t);
-          if (v.tp[t] !== undefined) chipLabel += ' <small>('+v.tp[t].toFixed(2)+'&euro;)</small>';
-          html += '<div class="chip" onclick="selTaille('+i+',this,\''+esc(t)+'\')">' +chipLabel+'</div>';
+        // Une ligne quantité par taille
+        v.ta.forEach(function(t) {
+          var si = stateIndexFor(i, t);
+          var prix = (v.tp[t] !== undefined) ? v.tp[t] : v.x;
+          html += '<div class="size-line">';
+          html += '<span class="size-name">'+esc(t)+'</span>';
+          if (v.tp[t] !== undefined) {
+            html += '<span class="size-price">'+prix.toFixed(2)+'&euro;</span>';
+          } else {
+            html += '<span class="size-price"></span>';
+          }
+          if (v.co && v.co.length) {
+            html += '<select id="color_'+si+'" onchange="selColorLine('+si+')" style="font-size:.8em;border-radius:8px;border:1px solid #ddd;padding:4px;max-width:80px">';
+            html += '<option value="">Couleur</option>';
+            v.co.forEach(function(cl){ html += '<option value="'+esc(cl)+'">'+esc(cl)+'</option>'; });
+            html += '</select>';
+          }
+          html += '<div class="qty-row" style="margin:0;flex:1;justify-content:flex-end">';
+          html += '<button class="qty-btn minus" style="width:30px;height:30px;font-size:1em" onclick="chgQty('+si+',-1)">&minus;</button>';
+          html += '<span class="qty-val" id="qty_'+si+'" style="min-width:40px;font-size:.95em">0</span>';
+          html += '<button class="qty-btn plus" style="width:30px;height:30px;font-size:1em" onclick="chgQty('+si+',1)">+</button>';
+          html += '</div></div>';
         });
-        html += '</div>';
+      } else {
+        // Pas de tailles : couleur + quantité simple
+        if (v.co && v.co.length) {
+          var si0 = stateIndexFor(i, null);
+          html += '<div class="attr-label">Couleur</div><div class="options">';
+          v.co.forEach(function(cl){ html += '<div class="chip" onclick="selCouleur('+si0+',this,\''+esc(cl)+'\')">'+esc(cl)+'</div>'; });
+          html += '</div>';
+        }
+        var si1 = stateIndexFor(i, null);
+        html += '<div class="qty-row"><button class="qty-btn minus" onclick="chgQty('+si1+',-1)">&minus;</button>';
+        html += '<span class="qty-val" id="qty_'+si1+'">0 '+esc(UNITE)+'</span>';
+        html += '<button class="qty-btn plus" onclick="chgQty('+si1+',1)">+</button></div>';
       }
-      if (v.co && v.co.length) {
-        html += '<div class="attr-label">Couleur</div><div class="options">';
-        v.co.forEach(function(cl){ html += '<div class="chip" onclick="selCouleur('+i+',this,\''+esc(cl)+'\')">'+esc(cl)+'</div>'; });
-        html += '</div>';
-      }
-      html += '<div class="qty-row"><button class="qty-btn minus" onclick="chgQty('+i+',-1)">&minus;</button>';
-      html += '<span class="qty-val" id="qty_'+i+'">0 '+esc(UNITE)+'</span>';
-      html += '<button class="qty-btn plus" onclick="chgQty('+i+',1)">+</button></div></div>';
+      html += '</div>';
     });
     c.innerHTML = html;
+  }
+
+  function stateIndexFor(varIdx, taille) {
+    for (var s = 0; s < state.length; s++) {
+      if (state[s].varIdx === varIdx && state[s].taille === taille) return s;
+    }
+    return -1;
   }
 
   function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
   function fmtQte(q){ return (UNITE==="kg" ? q.toFixed(1) : q.toFixed(0)) + " " + UNITE; }
 
-  window.selTaille = function(i, el, t){
-    state[i].taille = state[i].taille===t ? null : t;
+  window.selCouleur = function(si, el, cl){
+    state[si].couleur = state[si].couleur===cl ? null : cl;
     el.parentElement.querySelectorAll(".chip").forEach(function(c){c.classList.remove("selected");});
-    if(state[i].taille) el.classList.add("selected");
+    if(state[si].couleur) el.classList.add("selected");
     update();
   };
-  window.selCouleur = function(i, el, cl){
-    state[i].couleur = state[i].couleur===cl ? null : cl;
-    el.parentElement.querySelectorAll(".chip").forEach(function(c){c.classList.remove("selected");});
-    if(state[i].couleur) el.classList.add("selected");
+  window.selColorLine = function(si){
+    var sel = document.getElementById("color_"+si);
+    state[si].couleur = sel.value || null;
     update();
   };
-  window.chgQty = function(i, d){
-    state[i].quantite = Math.max(0, +(state[i].quantite + d*INC).toFixed(2));
+  window.chgQty = function(si, d){
+    state[si].quantite = Math.max(0, +(state[si].quantite + d*INC).toFixed(2));
     update();
   };
 
+  function prixPourLigne(si) {
+    var s = state[si];
+    var v = VARIANTES[s.varIdx];
+    if (s.taille && v.tp && v.tp[s.taille] !== undefined) return v.tp[s.taille];
+    return v.x;
+  }
+
   function update(){
     var total=0, any=false, recapH="";
+    // Vérifier activité par variante
+    var varActive = {};
+    state.forEach(function(s, si){
+      var q = s.quantite;
+      var qEl = document.getElementById("qty_"+si);
+      if (qEl) qEl.textContent = q > 0 ? fmtQte(q) : "0";
+      if (q > 0) {
+        any = true;
+        varActive[s.varIdx] = true;
+        var prix = prixPourLigne(si);
+        var st = prix * q; total += st;
+        var desc = s.nom;
+        if (s.taille) desc += " — " + s.taille;
+        if (s.couleur) desc += " — " + s.couleur;
+        recapH += '<div class="recap-line"><span>'+esc(desc)+' &times; '+fmtQte(q)+'</span><span>'+st.toFixed(2)+' &euro;</span></div>';
+      }
+    });
     VARIANTES.forEach(function(v, i){
       var el = document.getElementById("var_"+i);
-      var q = state[i].quantite;
-      var prixEffectif = v.x;
-      if (state[i].taille && v.tp && v.tp[state[i].taille] !== undefined) {
-        prixEffectif = v.tp[state[i].taille];
-      }
-      // Mettre à jour le prix affiché en en-tête de la variante
-      var priceEl = document.getElementById("price_"+i);
-      if (priceEl) priceEl.innerHTML = prixEffectif.toFixed(2)+' &euro;/'+esc(UNITE);
-      document.getElementById("qty_"+i).textContent = fmtQte(q);
-      if(q > 0){
-        el.classList.add("active"); any=true;
-        var st = prixEffectif * q; total += st;
-        var desc = v.n;
-        if(state[i].taille) desc += " — " + state[i].taille;
-        if(state[i].couleur) desc += " — " + state[i].couleur;
-        recapH += '<div class="recap-line"><span>'+esc(desc)+' &times; '+fmtQte(q)+'</span><span>'+st.toFixed(2)+' &euro;</span></div>';
-      } else {
-        el.classList.remove("active");
-      }
+      if (varActive[i]) { el.classList.add("active"); } else { el.classList.remove("active"); }
     });
     var rc = document.getElementById("recapCard");
     if(any){
