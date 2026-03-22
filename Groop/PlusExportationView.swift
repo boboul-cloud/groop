@@ -228,6 +228,16 @@ struct PlusExportationView: View {
                     previewURL = url
                 }
             }
+
+            BonCommandeButton(
+                icon: "tablecells",
+                label: "Export CSV (Excel)",
+                style: .filled
+            ) {
+                if let url = store.exporterBonCommandeCSV() {
+                    shareItem = IdentifiableURL(url: url)
+                }
+            }
         }
         .padding()
         .background(.ultraThinMaterial)

@@ -16,6 +16,14 @@ struct CommandesView: View {
     @State private var filtreLivre: Bool? = nil
     @State private var filtreCategorie: UUID? = nil
     @State private var showProUpgrade = false
+    @State private var triCommandes: TriCommandes = .ajout
+
+    enum TriCommandes: String, CaseIterable {
+        case ajout = "Ordre d'ajout"
+        case nom = "Nom"
+        case montant = "Montant"
+        case statut = "Statut (impayés d'abord)"
+    }
 
     private func filtrerCommande(_ order: Order) -> Bool {
         let matchSearch = searchText.isEmpty
@@ -54,7 +62,25 @@ struct CommandesView: View {
     }
 
     var commandesFiltrees: [Binding<Order>] {
-        $store.orders.filter { filtrerCommande($0.wrappedValue) }
+        let filtered = $store.orders.filter { filtrerCommande($0.wrappedValue) }
+        switch triCommandes {
+        case .ajout:
+            return filtered
+        case .nom:
+            return filtered.sorted { $0.wrappedValue.nomComplet.localizedCompare($1.wrappedValue.nomComplet) == .orderedAscending }
+        case .montant:
+            return filtered.sorted { ($1.wrappedValue.total(variantes: store.variantes) ?? 0) < ($0.wrappedValue.total(variantes: store.variantes) ?? 0) }
+        case .statut:
+            return filtered.sorted { a, b in
+                let aImpaye = a.wrappedValue.resteARegler(variantes: store.variantes) > 0 && (a.wrappedValue.estLivre || a.wrappedValue.partiellementLivre)
+                let bImpaye = b.wrappedValue.resteARegler(variantes: store.variantes) > 0 && (b.wrappedValue.estLivre || b.wrappedValue.partiellementLivre)
+                if aImpaye != bImpaye { return aImpaye }
+                let aNonLivre = a.wrappedValue.estValide && !a.wrappedValue.estLivre
+                let bNonLivre = b.wrappedValue.estValide && !b.wrappedValue.estLivre
+                if aNonLivre != bNonLivre { return aNonLivre }
+                return a.wrappedValue.nomComplet.localizedCompare(b.wrappedValue.nomComplet) == .orderedAscending
+            }
+        }
     }
 
     /// Sections groupées par catégorie : [(titre, commandes)]
@@ -172,6 +198,21 @@ struct CommandesView: View {
             }
             .navigationTitle("Commandes")
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Menu {
+                        ForEach(TriCommandes.allCases, id: \.self) { tri in
+                            Button {
+                                withAnimation { triCommandes = tri }
+                            } label: {
+                                Label(tri.rawValue, systemImage: triCommandes == tri ? "checkmark" : "")
+                            }
+                        }
+                    } label: {
+                        Image(systemName: "arrow.up.arrow.down")
+                            .font(.subheadline)
+                            .foregroundStyle(.ocean)
+                    }
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         if storeManager.clientsLimiteAtteinte(count: store.orders.count) {
@@ -441,6 +482,24 @@ struct ModernOrderDetailView: View {
                 }
             } header: {
                 StyledSectionHeader(title: "Informations", icon: "person.text.rectangle")
+            }
+
+            // MARK: - Alerte doublon
+            if let doublon = store.doublonPour(order) {
+                Section {
+                    HStack(spacing: 10) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundStyle(.orange)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Doublon possible")
+                                .font(.subheadline.bold())
+                            Text("Client similaire : \(doublon.nomComplet.isEmpty ? doublon.telephone : doublon.nomComplet)")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .padding(.vertical, 4)
+                }
             }
 
             // MARK: - Statut livraison

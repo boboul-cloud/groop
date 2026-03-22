@@ -148,6 +148,16 @@ class OrderStore: ObservableObject {
         orders.filter { $0.estValide && ($0.estLivre || $0.partiellementLivre) && $0.resteARegler(variantes: variantes) > 0 }.count
     }
 
+    /// Clients impayés (livrés mais pas entièrement réglés) avec un téléphone
+    var clientsImpayes: [Order] {
+        orders.filter { $0.estValide && ($0.estLivre || $0.partiellementLivre) && $0.resteARegler(variantes: variantes) > 0 && !$0.telephone.isEmpty }
+    }
+
+    /// Clients dont la commande n'a pas encore été livrée, avec un téléphone
+    var clientsNonLivres: [Order] {
+        orders.filter { $0.estValide && !$0.estLivre && !$0.telephone.isEmpty }
+    }
+
     /// Tout est livré et tout est réglé (aucun impayé, aucune commande en cours)
     var toutEstFini: Bool {
         let commandesNonLivrees = orders.filter { $0.estValide && !$0.estLivre }
@@ -773,6 +783,52 @@ class OrderStore: ObservableObject {
         }
     }
 
+    // MARK: - Export CSV bon de commande
+
+    func exporterBonCommandeCSV() -> URL? {
+        let sep = ";"
+        var lignesCSV: [String] = []
+        lignesCSV.append(["Variante", "Taille", "Couleur", "Client", "Quantité", "Prix unitaire", "Total"].joined(separator: sep))
+
+        for order in orders where order.estValide {
+            for ligne in order.lignes where !ligne.variante.isEmpty && ligne.quantite > 0 {
+                let v = variantes.first(where: { $0.nom == ligne.variante })
+                let pu = v?.prixPourTaille(ligne.taille) ?? 0
+                let total = ligne.quantite * pu
+                let row = [
+                    csvEscape(ligne.variante),
+                    csvEscape(ligne.taille ?? ""),
+                    csvEscape(ligne.couleur ?? ""),
+                    csvEscape(order.nomComplet),
+                    String(format: "%.2f", ligne.quantite).replacingOccurrences(of: ".", with: ","),
+                    String(format: "%.2f", pu).replacingOccurrences(of: ".", with: ","),
+                    String(format: "%.2f", total).replacingOccurrences(of: ".", with: ",")
+                ]
+                lignesCSV.append(row.joined(separator: sep))
+            }
+        }
+
+        let contenu = lignesCSV.joined(separator: "\n")
+        let df = DateFormatter()
+        df.dateFormat = "yyyy-MM-dd"
+        let sanitized = titreCampagne.replacingOccurrences(of: " ", with: "_")
+        let nomFichier = "Commande_\(sanitized)_\(df.string(from: Date())).csv"
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent(nomFichier)
+        do {
+            try contenu.write(to: url, atomically: true, encoding: .utf8)
+            return url
+        } catch {
+            return nil
+        }
+    }
+
+    private func csvEscape(_ s: String) -> String {
+        if s.contains(";") || s.contains("\"") || s.contains("\n") {
+            return "\"" + s.replacingOccurrences(of: "\"", with: "\"\"") + "\""
+        }
+        return s
+    }
+
     // MARK: - PDF de distribution (par catégorie / client)
 
     func genererPDFDistribution() -> Data {
@@ -1149,6 +1205,19 @@ class OrderStore: ObservableObject {
          .replacingOccurrences(of: "\n", with: "\\n")
     }
 
+    /// Retourne un doublon potentiel pour une commande (même téléphone ou nom identique, en excluant cette commande elle-même)
+    func doublonPour(_ order: Order) -> Order? {
+        let telNorm = normaliserTelephone(order.telephone)
+        let nomNorm = order.nomComplet.lowercased().trimmingCharacters(in: .whitespaces)
+        return orders.first { autre in
+            guard autre.id != order.id else { return false }
+            if !telNorm.isEmpty && normaliserTelephone(autre.telephone) == telNorm { return true }
+            let autreNom = autre.nomComplet.lowercased().trimmingCharacters(in: .whitespaces)
+            if !nomNorm.isEmpty && autreNom == nomNorm { return true }
+            return false
+        }
+    }
+
     /// Normalise un numéro de téléphone pour la comparaison
     private func normaliserTelephone(_ tel: String) -> String {
         let digits = tel.filter(\.isNumber)
@@ -1183,10 +1252,14 @@ class OrderStore: ObservableObject {
 
         guard let commande = try? JSONDecoder().decode(CommandeWeb.self, from: jsonData) else { return nil }
 
-        // Vérifier si un client avec ce téléphone existe déjà
+        // Vérifier si un client avec ce téléphone ou ce nom existe déjà
         let tel = commande.p ?? ""
         let telNorm = normaliserTelephone(tel)
-        if let index = orders.firstIndex(where: { !telNorm.isEmpty && normaliserTelephone($0.telephone) == telNorm }) {
+        let nomWeb = commande.n.lowercased().trimmingCharacters(in: .whitespaces)
+        if let index = orders.firstIndex(where: {
+            (!telNorm.isEmpty && normaliserTelephone($0.telephone) == telNorm) ||
+            (!nomWeb.isEmpty && $0.nomComplet.lowercased().trimmingCharacters(in: .whitespaces) == nomWeb)
+        }) {
             // Ajouter les lignes à la commande existante
             for l in commande.l {
                 let ligne = LigneCommande(

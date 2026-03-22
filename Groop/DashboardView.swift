@@ -148,6 +148,32 @@ struct DashboardView: View {
                             }
                         }
 
+                        // MARK: - Stats par catégorie
+                        if !store.categories.isEmpty {
+                            VStack(spacing: 8) {
+                                HStack {
+                                    Image(systemName: "folder.fill")
+                                        .foregroundStyle(.ocean)
+                                    Text("Par catégorie")
+                                        .font(.headline)
+                                        .foregroundStyle(.ocean)
+                                    Spacer()
+                                }
+                                ForEach(Array(store.categories.enumerated()), id: \.element.id) { index, cat in
+                                    let ordresCat = store.orders.filter { $0.estValide && $0.categorieID == cat.id }
+                                    let qteCat = ordresCat.flatMap(\.lignes).map(\.quantite).reduce(0, +)
+                                    let totalCat = ordresCat.compactMap { $0.total(variantes: store.variantes) }.reduce(0, +)
+                                    categorieCard(
+                                        label: cat.nom.isEmpty ? "Sans nom" : cat.nom,
+                                        quantite: qteCat,
+                                        commandes: ordresCat.count,
+                                        total: totalCat,
+                                        color: categorieColor(index: index + store.variantes.count)
+                                    )
+                                }
+                            }
+                        }
+
                         // MARK: - Alerte impayés
                         if store.totalImpayes > 0 {
                             HStack(spacing: 12) {
@@ -214,6 +240,97 @@ struct DashboardView: View {
                         .padding()
                         .background(.ultraThinMaterial)
                         .clipShape(RoundedRectangle(cornerRadius: 16))
+
+                        // MARK: - Rappels
+                        if !store.clientsImpayes.isEmpty {
+                            VStack(spacing: 8) {
+                                HStack {
+                                    Image(systemName: "exclamationmark.bubble.fill")
+                                        .foregroundStyle(.coral)
+                                    Text("\(store.clientsImpayes.count) impayé(s)")
+                                        .font(.headline)
+                                        .foregroundStyle(.coral)
+                                    Spacer()
+                                    Button {
+                                        let noms = store.clientsImpayes.map(\.nomComplet).joined(separator: ", ")
+                                        let corps = "Bonjour, merci de régulariser votre paiement pour la campagne \(store.titreCampagne). Cordialement."
+                                        let nums = store.clientsImpayes.map(\.telephone).joined(separator: ",")
+                                        if let url = URL(string: "sms:\(nums)&body=\(corps.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")") {
+                                            UIApplication.shared.open(url)
+                                        }
+                                    } label: {
+                                        Label("Relancer", systemImage: "message.fill")
+                                            .font(.caption)
+                                            .fontWeight(.semibold)
+                                            .padding(.horizontal, 12)
+                                            .padding(.vertical, 6)
+                                            .background(Color.coral.gradient)
+                                            .foregroundStyle(.white)
+                                            .clipShape(Capsule())
+                                    }
+                                }
+                                ForEach(store.clientsImpayes) { client in
+                                    HStack {
+                                        Text(client.nomComplet)
+                                            .font(.subheadline)
+                                        Spacer()
+                                        Text(String(format: "%.2f €", client.resteARegler(variantes: store.variantes)))
+                                            .font(.subheadline.bold())
+                                            .foregroundStyle(.coral)
+                                    }
+                                }
+                            }
+                            .padding()
+                            .background(Color.coral.opacity(0.08))
+                            .clipShape(RoundedRectangle(cornerRadius: 16))
+                        }
+
+                        if !store.clientsNonLivres.isEmpty {
+                            VStack(spacing: 8) {
+                                HStack {
+                                    Image(systemName: "shippingbox.fill")
+                                        .foregroundStyle(.orange)
+                                    Text("\(store.clientsNonLivres.count) à livrer")
+                                        .font(.headline)
+                                        .foregroundStyle(.orange)
+                                    Spacer()
+                                    Button {
+                                        let corps = "Bonjour, votre commande \(store.titreCampagne) est prête ! Merci de venir la récupérer."
+                                        let nums = store.clientsNonLivres.map(\.telephone).joined(separator: ",")
+                                        if let url = URL(string: "sms:\(nums)&body=\(corps.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")") {
+                                            UIApplication.shared.open(url)
+                                        }
+                                    } label: {
+                                        Label("Prévenir", systemImage: "message.fill")
+                                            .font(.caption)
+                                            .fontWeight(.semibold)
+                                            .padding(.horizontal, 12)
+                                            .padding(.vertical, 6)
+                                            .background(Color.orange.gradient)
+                                            .foregroundStyle(.white)
+                                            .clipShape(Capsule())
+                                    }
+                                }
+                                ForEach(store.clientsNonLivres.prefix(5)) { client in
+                                    HStack {
+                                        Text(client.nomComplet)
+                                            .font(.subheadline)
+                                        Spacer()
+                                        Text(store.formatQte(client.quantiteTotale))
+                                            .font(.subheadline)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                }
+                                if store.clientsNonLivres.count > 5 {
+                                    Text("+ \(store.clientsNonLivres.count - 5) autre(s)")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                            .padding()
+                            .background(Color.orange.opacity(0.08))
+                            .clipShape(RoundedRectangle(cornerRadius: 16))
+                        }
                     }
                     .padding()
                 }

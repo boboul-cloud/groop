@@ -335,10 +335,48 @@ input:focus{outline:none;border-color:var(--ocean)}
       return d + " x" + fmtQte(l.q);
     }).join(", ");
     var smsBody = "Commande " + nom + (tel ? " ("+tel+")" : "") + " : " + recap + "\n" + deepUrl;
+    var smsHref = "sms:" + (TEL_VENDEUR||'') + "&body=" + encodeURIComponent(smsBody);
+
+    // Calculer le total pour la confirmation
+    var total = 0;
+    lignes.forEach(function(l){
+      VARIANTES.forEach(function(v){
+        if(v.n===l.v){
+          var p = (l.t && v.tp && v.tp[l.t]!==undefined) ? v.tp[l.t] : v.x;
+          total += p * l.q;
+        }
+      });
+    });
 
     if (TEL_VENDEUR) {
-      var smsHref = "sms:" + TEL_VENDEUR + "&body=" + encodeURIComponent(smsBody);
-      window.location.href = smsHref;
+      // Afficher la confirmation avant d'ouvrir SMS
+      document.getElementById("formSection").classList.add("hidden");
+      var successHtml = '<div class="card success">';
+      successHtml += '<div style="font-size:3em;margin-bottom:12px">&#x2705;</div>';
+      successHtml += '<h2>Commande prête !</h2>';
+      successHtml += '<p style="margin-bottom:16px">Votre commande va s\'ouvrir dans l\'app Messages. Envoyez le SMS pour confirmer.</p>';
+      successHtml += '<div class="recap" style="text-align:left;margin-bottom:16px">';
+      lignes.forEach(function(l){
+        var d = l.v;
+        if(l.t) d += " — " + l.t;
+        if(l.c) d += " — " + l.c;
+        var lPrix = 0;
+        VARIANTES.forEach(function(v){
+          if(v.n===l.v){
+            lPrix = (l.t && v.tp && v.tp[l.t]!==undefined) ? v.tp[l.t] : v.x;
+          }
+        });
+        successHtml += '<div class="recap-line"><span>'+esc(d)+' &times; '+fmtQte(l.q)+'</span><span>'+( lPrix*l.q).toFixed(2)+' &euro;</span></div>';
+      });
+      successHtml += '<div class="recap-line total-line"><span>Total</span><span>'+total.toFixed(2)+' &euro;</span></div>';
+      successHtml += '</div>';
+      successHtml += '<button class="submit-btn" onclick="window.location.href=\''+smsHref+'\'">&#x1F4E9; Ouvrir Messages</button>';
+      successHtml += '<p style="margin-top:12px;font-size:.8em;color:#888">Si rien ne se passe, <a href="'+smsHref+'">cliquez ici</a>.</p>';
+      successHtml += '</div>';
+      document.getElementById("errorSection").innerHTML = successHtml;
+      document.getElementById("errorSection").classList.remove("hidden");
+      // Ouvrir SMS après un court délai
+      setTimeout(function(){ window.location.href = smsHref; }, 800);
     } else if (navigator.share) {
       navigator.share({ text: smsBody }).catch(function(){});
     }
