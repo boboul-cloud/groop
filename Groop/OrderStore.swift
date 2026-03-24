@@ -150,7 +150,7 @@ class OrderStore: ObservableObject {
 
     /// Clients impayés (livrés mais pas entièrement réglés) avec un téléphone
     var clientsImpayes: [Order] {
-        orders.filter { $0.estValide && ($0.estLivre || $0.partiellementLivre) && $0.resteARegler(variantes: variantes) > 0 && !$0.telephone.isEmpty }
+        orders.filter { $0.estValide && $0.estLivre && $0.resteARegler(variantes: variantes) > 0 && !$0.telephone.isEmpty }
     }
 
     /// Clients dont la commande n'a pas encore été livrée, avec un téléphone
@@ -815,7 +815,10 @@ class OrderStore: ObservableObject {
         let nomFichier = "Commande_\(sanitized)_\(df.string(from: Date())).csv"
         let url = FileManager.default.temporaryDirectory.appendingPathComponent(nomFichier)
         do {
-            try contenu.write(to: url, atomically: true, encoding: .utf8)
+            // BOM UTF-8 pour qu'Excel détecte correctement l'encodage
+            var data = Data([0xEF, 0xBB, 0xBF])
+            data.append(contenu.data(using: .utf8)!)
+            try data.write(to: url)
             return url
         } catch {
             return nil

@@ -56,7 +56,7 @@ struct DashboardView: View {
                             ScrollView(.horizontal, showsIndicators: false) {
                                 HStack(spacing: 12) {
                                     ForEach(store.variantes) { v in
-                                        prixPill(label: v.nom, prix: v.prix)
+                                        variantePill(label: v.nom)
                                     }
                                 }
                             }
@@ -252,10 +252,19 @@ struct DashboardView: View {
                                         .foregroundStyle(.coral)
                                     Spacer()
                                     Button {
-                                        let noms = store.clientsImpayes.map(\.nomComplet).joined(separator: ", ")
                                         let corps = "Bonjour, merci de régulariser votre paiement pour la campagne \(store.titreCampagne). Cordialement."
-                                        let nums = store.clientsImpayes.map(\.telephone).joined(separator: ",")
-                                        if let url = URL(string: "sms:\(nums)&body=\(corps.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")") {
+                                        let nums = store.clientsImpayes
+                                            .map { $0.telephone.filter { $0.isNumber || $0 == "+" } }
+                                            .filter { !$0.isEmpty }
+                                            .joined(separator: ",")
+                                        var comps = URLComponents()
+                                        comps.scheme = "sms"
+                                        comps.path = "/open"
+                                        comps.queryItems = [
+                                            URLQueryItem(name: "addresses", value: nums),
+                                            URLQueryItem(name: "body", value: corps)
+                                        ]
+                                        if let url = comps.url {
                                             UIApplication.shared.open(url)
                                         }
                                     } label: {
@@ -285,52 +294,7 @@ struct DashboardView: View {
                             .clipShape(RoundedRectangle(cornerRadius: 16))
                         }
 
-                        if !store.clientsNonLivres.isEmpty {
-                            VStack(spacing: 8) {
-                                HStack {
-                                    Image(systemName: "shippingbox.fill")
-                                        .foregroundStyle(.orange)
-                                    Text("\(store.clientsNonLivres.count) à livrer")
-                                        .font(.headline)
-                                        .foregroundStyle(.orange)
-                                    Spacer()
-                                    Button {
-                                        let corps = "Bonjour, votre commande \(store.titreCampagne) est prête ! Merci de venir la récupérer."
-                                        let nums = store.clientsNonLivres.map(\.telephone).joined(separator: ",")
-                                        if let url = URL(string: "sms:\(nums)&body=\(corps.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")") {
-                                            UIApplication.shared.open(url)
-                                        }
-                                    } label: {
-                                        Label("Prévenir", systemImage: "message.fill")
-                                            .font(.caption)
-                                            .fontWeight(.semibold)
-                                            .padding(.horizontal, 12)
-                                            .padding(.vertical, 6)
-                                            .background(Color.orange.gradient)
-                                            .foregroundStyle(.white)
-                                            .clipShape(Capsule())
-                                    }
-                                }
-                                ForEach(store.clientsNonLivres.prefix(5)) { client in
-                                    HStack {
-                                        Text(client.nomComplet)
-                                            .font(.subheadline)
-                                        Spacer()
-                                        Text(store.formatQte(client.quantiteTotale))
-                                            .font(.subheadline)
-                                            .foregroundStyle(.secondary)
-                                    }
-                                }
-                                if store.clientsNonLivres.count > 5 {
-                                    Text("+ \(store.clientsNonLivres.count - 5) autre(s)")
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                }
-                            }
-                            .padding()
-                            .background(Color.orange.opacity(0.08))
-                            .clipShape(RoundedRectangle(cornerRadius: 16))
-                        }
+
                     }
                     .padding()
                 }
@@ -345,23 +309,16 @@ struct DashboardView: View {
 
     // MARK: - Pill prix
 
-    private func prixPill(label: String, prix: Double) -> some View {
-        HStack(spacing: 6) {
-            Image(systemName: "eurosign.circle.fill")
-                .foregroundStyle(.ocean)
-            Text(label)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            Text(String(format: "%.2f €/%@", prix, store.labelUnite))
-                .font(.callout)
-                .fontWeight(.semibold)
-                .foregroundStyle(.ocean)
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 8)
-        .frame(maxWidth: .infinity)
-        .background(.ultraThinMaterial)
-        .clipShape(Capsule())
+    private func variantePill(label: String) -> some View {
+        Text(label)
+            .font(.callout)
+            .fontWeight(.semibold)
+            .foregroundStyle(.ocean)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            .frame(maxWidth: .infinity)
+            .background(.ultraThinMaterial)
+            .clipShape(Capsule())
     }
 
     private func categorieColor(index: Int) -> Color {

@@ -149,6 +149,10 @@ struct Order: Identifiable, Codable {
         return max(0, t - totalRegle)
     }
 
+    func totalLivre(variantes: [Variante]) -> Double {
+        lignes.compactMap { $0.totalLivre(variantes: variantes) }.reduce(0, +)
+    }
+
     func montantPaye(variantes: [Variante]) -> Double? {
         if totalRegle > 0 { return totalRegle }
         guard modePaiement != nil, let t = total(variantes: variantes) else { return nil }
@@ -190,6 +194,11 @@ struct Order: Identifiable, Codable {
         }
         livre = false
         dateLivraison = nil
+    }
+
+    mutating func annulerReglements() {
+        reglements = []
+        dateReglement = nil
     }
 
     mutating func ajouterReglement(montant: Double, mode: ModePaiement) {

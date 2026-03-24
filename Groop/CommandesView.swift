@@ -200,11 +200,9 @@ struct CommandesView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Menu {
-                        ForEach(TriCommandes.allCases, id: \.self) { tri in
-                            Button {
-                                withAnimation { triCommandes = tri }
-                            } label: {
-                                Label(tri.rawValue, systemImage: triCommandes == tri ? "checkmark" : "")
+                        Picker("Tri", selection: $triCommandes) {
+                            ForEach(TriCommandes.allCases, id: \.self) { tri in
+                                Text(tri.rawValue).tag(tri)
                             }
                         }
                     } label: {
@@ -412,6 +410,8 @@ struct ModernOrderDetailView: View {
     @State private var modeReglement: ModePaiement = .especes
     @State private var showLivraisonPartielle = false
     @State private var qtesALivrer: [UUID: Double] = [:]
+    @State private var showAlertAnnulerLivraison = false
+    @State private var showAlertAnnulerReglements = false
 
     var body: some View {
         Form {
@@ -557,10 +557,7 @@ struct ModernOrderDetailView: View {
                     }
 
                     Button {
-                        withAnimation(.spring(response: 0.5)) {
-                            order.annulerLivraison()
-                            store.save()
-                        }
+                        showAlertAnnulerLivraison = true
                     } label: {
                         HStack {
                             Image(systemName: "arrow.uturn.backward.circle.fill")
@@ -721,6 +718,21 @@ struct ModernOrderDetailView: View {
                                 .fontWeight(.bold)
                         }
                     }
+
+                    if !order.reglements.isEmpty {
+                        Button {
+                            showAlertAnnulerReglements = true
+                        } label: {
+                            HStack {
+                                Image(systemName: "arrow.uturn.backward.circle.fill")
+                                Text("Annuler les règlements")
+                                    .fontWeight(.semibold)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 4)
+                        }
+                        .tint(.coral)
+                    }
                 } header: {
                     StyledSectionHeader(title: "Paiements", icon: "creditcard")
                 }
@@ -808,6 +820,28 @@ struct ModernOrderDetailView: View {
                     store.save()
                 }
             }
+        }
+        .alert("Annuler la livraison ?", isPresented: $showAlertAnnulerLivraison) {
+            Button("Annuler la livraison", role: .destructive) {
+                withAnimation(.spring(response: 0.5)) {
+                    order.annulerLivraison()
+                    store.save()
+                }
+            }
+            Button("Non", role: .cancel) {}
+        } message: {
+            Text("La livraison de \(order.nomComplet.isEmpty ? "cette commande" : order.nomComplet) sera annulée.")
+        }
+        .alert("Annuler les règlements ?", isPresented: $showAlertAnnulerReglements) {
+            Button("Annuler les règlements", role: .destructive) {
+                withAnimation(.spring(response: 0.5)) {
+                    order.annulerReglements()
+                    store.save()
+                }
+            }
+            Button("Non", role: .cancel) {}
+        } message: {
+            Text("Tous les règlements de \(order.nomComplet.isEmpty ? "cette commande" : order.nomComplet) seront supprimés.")
         }
         .alert("Commande non entièrement réglée", isPresented: $showAlertNonRegle) {
             Button("Livrer quand même", role: .destructive) {
@@ -1019,8 +1053,15 @@ struct LivraisonPartielleSheet: View {
                     Section {
                         VStack(spacing: 8) {
                             HStack {
-                                Text(ligne.variante)
-                                    .fontWeight(.semibold)
+                                HStack(spacing: 4) {
+                                    Text(ligne.variante)
+                                        .fontWeight(.semibold)
+                                    if let taille = ligne.taille, !taille.isEmpty {
+                                        Text("· \(taille)")
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                }
                                 Spacer()
                                 Text("Reste : \(store.formatQte(ligne.resteALivrer))")
                                     .font(.caption)

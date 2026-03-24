@@ -52,17 +52,26 @@ struct PlusCommandeView: View {
         lignes.append("")
         lignes.append("Voici les produits disponibles :")
         for variante in store.variantes where !variante.nom.isEmpty {
-            let prix = String(format: "%.2f €/%@", variante.prix, store.uniteQuantite.rawValue)
+            let aDesPrixTailles = !variante.tailles.isEmpty && variante.tailles.allSatisfy({ variante.prixTailles[$0] != nil })
             lignes.append("")
-            lignes.append("▸ \(variante.nom) — \(prix)")
-            if !variante.tailles.isEmpty {
+            if aDesPrixTailles {
+                lignes.append("▸ \(variante.nom)")
                 let taillesInfo = variante.tailles.map { t in
-                    if let p = variante.prixTailles[t] {
-                        return "\(t) (\(String(format: "%.2f", p)) €)"
-                    }
-                    return t
+                    "\(t) : \(String(format: "%.2f", variante.prixTailles[t]!)) €/\(store.uniteQuantite.rawValue)"
                 }
-                lignes.append("   Tailles : \(taillesInfo.joined(separator: ", "))")
+                lignes.append("   \(taillesInfo.joined(separator: ", "))")
+            } else {
+                let prix = String(format: "%.2f €/%@", variante.prix, store.uniteQuantite.rawValue)
+                lignes.append("▸ \(variante.nom) — \(prix)")
+                if !variante.tailles.isEmpty {
+                    let taillesInfo = variante.tailles.map { t in
+                        if let p = variante.prixTailles[t] {
+                            return "\(t) (\(String(format: "%.2f", p)) €)"
+                        }
+                        return t
+                    }
+                    lignes.append("   Tailles : \(taillesInfo.joined(separator: ", "))")
+                }
             }
             if !variante.couleurs.isEmpty {
                 lignes.append("   Couleurs : \(variante.couleurs.joined(separator: ", "))")
@@ -70,6 +79,19 @@ struct PlusCommandeView: View {
         }
         lignes.append("")
         lignes.append("N'hésitez pas à me contacter pour passer commande !")
+        return lignes.joined(separator: "\n")
+    }
+
+    private func genererMessageArrivee() -> String {
+        let titre = store.titreCampagne.isEmpty ? "votre commande" : "la campagne « \(store.titreCampagne) »"
+        var lignes: [String] = []
+        lignes.append("Bonjour !")
+        lignes.append("")
+        lignes.append("Bonne nouvelle, \(titre) est arrivée ! 🎉")
+        lignes.append("")
+        lignes.append("Merci de venir récupérer votre commande ou de me contacter pour convenir d'une livraison.")
+        lignes.append("")
+        lignes.append("À bientôt !")
         return lignes.joined(separator: "\n")
     }
 
@@ -250,6 +272,21 @@ struct PlusCommandeView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 12))
             }
             .disabled(store.variantes.isEmpty)
+
+            Button {
+                messageTexte = genererMessageArrivee()
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "truck.box.fill")
+                    Text("Générer un message d'arrivée")
+                        .fontWeight(.medium)
+                }
+                .frame(maxWidth: .infinity)
+                .padding()
+                .background(Color.green.opacity(0.1))
+                .foregroundStyle(.green)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
 
             Button {
                 clientSelectionItem = ClientSelectionItem(type: .commande, message: messageTexte)

@@ -112,14 +112,38 @@ struct PaiementsView: View {
                                 Spacer()
                             }
                             Divider()
+
+                            HStack {
+                                Text("Client")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                Spacer()
+                                Text("Livré")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                    .frame(width: 70, alignment: .trailing)
+                                Text("Réglé")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                    .frame(width: 70, alignment: .trailing)
+                            }
+
                             ForEach(store.orders.filter { ($0.estLivre || $0.partiellementLivre) && $0.resteARegler(variantes: store.variantes) > 0 }) { order in
+                                let montantLivre = order.totalLivre(variantes: store.variantes)
+                                let montantRegle = order.totalRegle
+                                let couleur: Color = montantLivre > montantRegle ? .coral : .orange
                                 HStack {
                                     Text(order.nomComplet.isEmpty ? "Sans nom" : order.nomComplet)
                                         .fontWeight(.medium)
                                     Spacer()
-                                    Text(String(format: "%.2f €", order.resteARegler(variantes: store.variantes)))
-                                        .fontWeight(.bold)
-                                        .foregroundStyle(.coral)
+                                    Text(String(format: "%.2f €", montantLivre))
+                                        .fontWeight(.semibold)
+                                        .foregroundStyle(couleur)
+                                        .frame(width: 70, alignment: .trailing)
+                                    Text(String(format: "%.2f €", montantRegle))
+                                        .fontWeight(.semibold)
+                                        .foregroundStyle(couleur)
+                                        .frame(width: 70, alignment: .trailing)
                                 }
                             }
                             Divider()
