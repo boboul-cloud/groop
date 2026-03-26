@@ -248,7 +248,7 @@ input:focus{outline:none;border-color:var(--ocean)}
     var html = "";
     VARIANTES.forEach(function(v, i){
       html += '<div class="variante" id="var_'+i+'">';
-      html += '<div class="var-header"><span class="var-name">'+esc(v.n)+'</span><span class="var-price">'+v.x.toFixed(2)+' &euro;'+(UNITE==='kg'?'/kg':'')+'</span></div>';
+      html += '<div class="var-header"><span class="var-name">'+esc(v.n)+'</span><span class="var-price" id="vartotal_'+i+'">0.00 &euro;</span></div>';
 
       if (v.ta && v.ta.length) {
         // Une ligne quantité par taille
@@ -402,14 +402,13 @@ input:focus{outline:none;border-color:var(--ocean)}
     var encoded = btoa(unescape(encodeURIComponent(data)));
     var deepUrl = "groop://order?d=" + encodeURIComponent(encoded);
 
-    // Récap texte pour le SMS
-    var recap = lignes.map(function(l){
-      var d = l.v;
-      if(l.t) d += " " + l.t;
-      if(l.c) d += " " + l.c;
-      return d + " x" + fmtQte(l.q);
-    }).join(", ");
-    var smsBody = "Commande " + nom + (tel ? " ("+tel+")" : "") + " : " + recap + "\n" + deepUrl;
+    // Récap texte pour le SMS (court pour rester sous la limite iOS)
+    var nbLignes = lignes.length;
+    var smsBody = "Commande " + nom + (tel ? " ("+tel+")" : "") + " (" + nbLignes + " article" + (nbLignes > 1 ? "s" : "") + ")\n" + deepUrl;
+    // Si le SMS dépasse ~900 car., supprimer le récap et garder uniquement le lien
+    if (smsBody.length > 900) {
+      smsBody = "Commande " + nom + "\n" + deepUrl;
+    }
     var smsHref = "sms:" + (TEL_VENDEUR||'') + "?body=" + encodeURIComponent(smsBody);
 
     // Calculer le total pour la confirmation
