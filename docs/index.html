@@ -117,16 +117,21 @@ input:focus{outline:none;border-color:var(--ocean)}
 
   // Parse le format compact v1 : "1|titre|unite|nom~prix~t1,t2~c1,c2|..."
   // ou v2 : "2|titre|unite|telVendeur|nom~prix~t1;t2~c1;c2|..."
+  // ou v3 : "3|titre|unite|telVendeur|labelCouleur|nom~prix~t1;t2~c1;c2|..."
   // Séparateur tailles/couleurs : ";" (v2+) avec fallback "," (v1)
   function parseCompact(str) {
     var seg = str.split('|');
     var ver = parseInt(seg[0]);
-    if (ver !== 1 && ver !== 2) return null;
-    var cfg = { t: seg[1], u: seg[2], v: [], p: '' };
+    if (ver !== 1 && ver !== 2 && ver !== 3) return null;
+    var cfg = { t: seg[1], u: seg[2], v: [], p: '', lc: 'Couleur' };
     var startIdx = 3;
     if (ver === 2) {
       cfg.p = seg[3] || '';
       startIdx = 4;
+    } else if (ver === 3) {
+      cfg.p = seg[3] || '';
+      cfg.lc = seg[4] || 'Couleur';
+      startIdx = 5;
     }
     for (var i = startIdx; i < seg.length; i++) {
       var f = seg[i].split('~');
@@ -218,6 +223,7 @@ input:focus{outline:none;border-color:var(--ocean)}
     var TITRE = config.t || 'Commande';
     var INC = (UNITE === 'kg') ? 0.5 : 1;
     var TEL_VENDEUR = config.p || '';
+    var LABEL_COULEUR = config.lc || 'Couleur';
 
   document.getElementById("titre").textContent = TITRE;
   document.title = TITRE + " — Commande";
@@ -264,7 +270,7 @@ input:focus{outline:none;border-color:var(--ocean)}
             var aXp = v.xp && Object.keys(v.xp).length > 0;
             html += '<div class="size-bottom">';
             html += '<select id="color_'+si+'" onchange="selColorLine('+si+')" style="font-size:.8em;border-radius:8px;border:1px solid #ddd;padding:4px 8px;flex:1">';
-            html += '<option value="">Contenant</option>';
+            html += '<option value="">'+esc(LABEL_COULEUR)+'</option>';
             v.co.forEach(function(cl){
               if (aXp) {
                 var comboKey = t+'+'+cl;
@@ -285,7 +291,7 @@ input:focus{outline:none;border-color:var(--ocean)}
         // Pas de tailles : couleur + quantité simple
         if (v.co && v.co.length) {
           var si0 = stateIndexFor(i, null);
-          html += '<div class="attr-label">Couleur</div><div class="options">';
+          html += '<div class="attr-label">'+esc(LABEL_COULEUR)+'</div><div class="options">';
           v.co.forEach(function(cl){
             var lbl = cl;
             if (v.cp && v.cp[cl] !== undefined) lbl += ' ('+v.cp[cl].toFixed(2)+'€)';
