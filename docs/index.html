@@ -102,20 +102,22 @@ input:focus{outline:none;border-color:var(--ocean)}
 
   // Parse le format compact v1 : "1|titre|unite|nom~prix~t1,t2~c1,c2|..."
   // ou v2 : "2|titre|unite|telVendeur|nom~prix~t1;t2~c1;c2|..."
+  // ou v3 : "3|titre|unite|telVendeur|nom~prix~tailles~couleurs~combinaisons|..."
+  // v3 ajoute prixCouleurs et prixCombinaisons
   // Séparateur tailles/couleurs : ";" (v2+) avec fallback "," (v1)
   function parseCompact(str) {
     var seg = str.split('|');
     var ver = parseInt(seg[0]);
-    if (ver !== 1 && ver !== 2) return null;
+    if (ver !== 1 && ver !== 2 && ver !== 3) return null;
     var cfg = { t: seg[1], u: seg[2], v: [], p: '' };
     var startIdx = 3;
-    if (ver === 2) {
+    if (ver >= 2) {
       cfg.p = seg[3] || '';
       startIdx = 4;
     }
     for (var i = startIdx; i < seg.length; i++) {
       var f = seg[i].split('~');
-      var v = { n: f[0], x: parseFloat(f[1]) || 0, tp: {} };
+      var v = { n: f[0], x: parseFloat(f[1]) || 0, tp: {}, cp: {}, xp: {} };
       if (f[2]) {
         var sep = f[2].indexOf(';') >= 0 ? ';' : ',';
         var rawTailles = f[2].split(sep);
@@ -133,7 +135,29 @@ input:focus{outline:none;border-color:var(--ocean)}
       }
       if (f[3]) {
         var sepC = f[3].indexOf(';') >= 0 ? ';' : ',';
-        v.co = f[3].split(sepC);
+        var rawCouleurs = f[3].split(sepC);
+        v.co = [];
+        rawCouleurs.forEach(function(c) {
+          var parts = c.split(':');
+          var nom = parts[0];
+          if (nom) {
+            v.co.push(nom);
+            if (parts.length > 1 && parts[1]) {
+              v.cp[nom] = parseFloat(parts[1]);
+            }
+          }
+        });
+      }
+      // v3 : combinaisons taille+couleur avec prix
+      if (ver >= 3 && f[4]) {
+        var rawCombos = f[4].split(';');
+        rawCombos.forEach(function(combo) {
+          var parts = combo.split(':');
+          var cle = parts[0]; // "taille+couleur"
+          if (cle && parts.length > 1 && parts[1]) {
+            v.xp[cle] = parseFloat(parts[1]);
+          }
+        });
       }
       cfg.v.push(v);
     }
@@ -210,9 +234,13 @@ input:focus{outline:none;border-color:var(--ocean)}
             html += '<span class="size-price"></span>';
           }
           if (v.co && v.co.length) {
-            html += '<select id="color_'+si+'" onchange="selColorLine('+si+')" style="font-size:.8em;border-radius:8px;border:1px solid #ddd;padding:4px;max-width:80px">';
+            html += '<select id="color_'+si+'" onchange="selColorLine('+si+')" style="font-size:.8em;border-radius:8px;border:1px solid #ddd;padding:4px;max-width:100px">';
             html += '<option value="">Couleur</option>';
-            v.co.forEach(function(cl){ html += '<option value="'+esc(cl)+'">'+esc(cl)+'</option>'; });
+            v.co.forEach(function(cl){
+              var clLabel = cl;
+              if (v.cp && v.cp[cl] !== undefined) clLabel += ' ('+v.cp[cl].toFixed(2)+'€)';
+              html += '<option value="'+esc(cl)+'">'+esc(clLabel)+'</option>';
+            });
             html += '</select>';
           }
           html += '<div class="qty-row" style="margin:0;flex:1;justify-content:flex-end">';
@@ -226,7 +254,11 @@ input:focus{outline:none;border-color:var(--ocean)}
         if (v.co && v.co.length) {
           var si0 = stateIndexFor(i, null);
           html += '<div class="attr-label">Couleur</div><div class="options">';
-          v.co.forEach(function(cl){ html += '<div class="chip" onclick="selCouleur('+si0+',this,\''+esc(cl)+'\')">'+esc(cl)+'</div>'; });
+          v.co.forEach(function(cl){
+            var clLabel = cl;
+            if (v.cp && v.cp[cl] !== undefined) clLabel += ' ('+v.cp[cl].toFixed(2)+'€)';
+            html += '<div class="chip" onclick="selCouleur('+si0+',this,\''+esc(cl)+'\')">' +esc(clLabel)+'</div>';
+          });
           html += '</div>';
         }
         var si1 = stateIndexFor(i, null);
@@ -265,11 +297,24 @@ input:focus{outline:none;border-color:var(--ocean)}
     update();
   };
 
+  // Retourne le prix effectif pour une variante : combinaison > couleur > taille > base
+  function prixPourVariante(v, taille, couleur) {
+    // 1) Prix combinaison taille+couleur
+    if (taille && couleur && v.xp) {
+      var cle = taille + '+' + couleur;
+      if (v.xp[cle] !== undefined) return v.xp[cle];
+    }
+    // 2) Prix couleur
+    if (couleur && v.cp && v.cp[couleur] !== undefined) return v.cp[couleur];
+    // 3) Prix taille
+    if (taille && v.tp && v.tp[taille] !== undefined) return v.tp[taille];
+    // 4) Prix de base
+    return v.x;
+  }
+
   function prixPourLigne(si) {
     var s = state[si];
-    var v = VARIANTES[s.varIdx];
-    if (s.taille && v.tp && v.tp[s.taille] !== undefined) return v.tp[s.taille];
-    return v.x;
+    return prixPourVariante(VARIANTES[s.varIdx], s.taille, s.couleur);
   }
 
   function update(){
@@ -342,8 +387,7 @@ input:focus{outline:none;border-color:var(--ocean)}
     lignes.forEach(function(l){
       VARIANTES.forEach(function(v){
         if(v.n===l.v){
-          var p = (l.t && v.tp && v.tp[l.t]!==undefined) ? v.tp[l.t] : v.x;
-          total += p * l.q;
+          total += prixPourVariante(v, l.t||null, l.c||null) * l.q;
         }
       });
     });
@@ -363,7 +407,7 @@ input:focus{outline:none;border-color:var(--ocean)}
         var lPrix = 0;
         VARIANTES.forEach(function(v){
           if(v.n===l.v){
-            lPrix = (l.t && v.tp && v.tp[l.t]!==undefined) ? v.tp[l.t] : v.x;
+            lPrix = prixPourVariante(v, l.t||null, l.c||null);
           }
         });
         successHtml += '<div class="recap-line"><span>'+esc(d)+' &times; '+fmtQte(l.q)+'</span><span>'+( lPrix*l.q).toFixed(2)+' &euro;</span></div>';

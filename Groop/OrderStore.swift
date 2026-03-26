@@ -1377,7 +1377,7 @@ class OrderStore: ObservableObject {
     private let pagesBaseURL = "https://boboul-cloud.github.io/groop/"
 
     /// Génère un lien web vers la page de commande hébergée sur GitHub Pages
-    /// Format compact : "2|titre|unite|telVendeur|nom~prix~t1,t2~c1,c2|..." en base64url
+    /// Format compact v3 : "3|titre|unite|telVendeur|nom~prix~tailles~couleurs~combinaisons|..."
     func genererLienWebCommande() -> URL? {
         let parts = variantes.filter { !$0.nom.isEmpty }.map { v in
             let taillesParts = v.tailles.map { t in
@@ -1386,10 +1386,21 @@ class OrderStore: ObservableObject {
                 }
                 return t
             }
-            return "\(v.nom)~\(v.prix)~\(taillesParts.joined(separator: ";"))~\(v.couleurs.joined(separator: ";"))"
+            let couleursParts = v.couleurs.map { c in
+                if let p = v.prixCouleurs[c] {
+                    return "\(c):\(p)"
+                }
+                return c
+            }
+            let comboParts = v.prixCombinaisons.map { (cle, prix) in
+                let parts = cle.split(separator: "|")
+                guard parts.count == 2 else { return "" }
+                return "\(parts[0])+\(parts[1]):\(prix)"
+            }.filter { !$0.isEmpty }
+            return "\(v.nom)~\(v.prix)~\(taillesParts.joined(separator: ";"))~\(couleursParts.joined(separator: ";"))~\(comboParts.joined(separator: ";"))"
         }
         guard !parts.isEmpty else { return nil }
-        let payload = "2|\(titreCampagne)|\(uniteQuantite.rawValue)|\(telephoneVendeur)|\(parts.joined(separator: "|"))"
+        let payload = "3|\(titreCampagne)|\(uniteQuantite.rawValue)|\(telephoneVendeur)|\(parts.joined(separator: "|"))"
         guard let raw = payload.data(using: .utf8) else { return nil }
 
         let encoded = raw.base64EncodedString()
