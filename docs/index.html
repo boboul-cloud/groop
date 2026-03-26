@@ -151,8 +151,8 @@ input:focus{outline:none;border-color:var(--ocean)}
           }
         });
       }
-      // v3 : combinaisons taille+couleur avec prix
-      if (ver >= 3 && f[4]) {
+      // combinaisons taille+couleur avec prix (5e champ ~)
+      if (f[4]) {
         var rawCombos = f[4].split(';');
         rawCombos.forEach(function(combo) {
           var parts = combo.split(':');
