@@ -255,9 +255,12 @@ input:focus{outline:none;border-color:var(--ocean)}
             html += '<span class="size-price"></span>';
           }
           if (v.co && v.co.length) {
+            var aXp = v.xp && Object.keys(v.xp).length > 0;
             html += '<select id="color_'+si+'" onchange="selColorLine('+si+')" style="font-size:.8em;border-radius:8px;border:1px solid #ddd;padding:4px;max-width:100px">';
             html += '<option value="">Couleur</option>';
             v.co.forEach(function(cl){
+              // Si combinaisons définies, ne montrer que les couleurs valides pour cette taille
+              if (aXp && !(v.xp[t+'+'+cl] !== undefined)) return;
               var lbl = cl;
               if (v.cp && v.cp[cl] !== undefined) lbl += ' ('+v.cp[cl].toFixed(2)+'€)';
               html += '<option value="'+esc(cl)+'">'+esc(lbl)+'</option>';
