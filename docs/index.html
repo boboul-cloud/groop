@@ -248,7 +248,7 @@ input:focus{outline:none;border-color:var(--ocean)}
     var html = "";
     VARIANTES.forEach(function(v, i){
       html += '<div class="variante" id="var_'+i+'">';
-      html += '<div class="var-header"><span class="var-name">'+esc(v.n)+'</span><span class="var-price" id="vartotal_'+i+'">0.00 &euro;</span></div>';
+      html += '<div class="var-header"><span class="var-name">'+esc(v.n)+'</span></div>';
 
       if (v.ta && v.ta.length) {
         // Une ligne quantité par taille
