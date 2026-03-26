@@ -903,25 +903,45 @@ struct LigneCommandeRow: View {
             .disabled(disabled)
 
             if let selectedVariante = store.variantes.first(where: { $0.nom == ligne.variante }) {
+                let aDesCombinaisons = !selectedVariante.prixCombinaisons.isEmpty
+
                 if !selectedVariante.tailles.isEmpty {
+                    // Filtrer les tailles : si combinaisons et couleur choisie, ne montrer que les tailles valides
+                    let taillesFiltrees: [String] = {
+                        guard aDesCombinaisons, let c = ligne.couleur else { return selectedVariante.tailles }
+                        let valides = selectedVariante.tailles.filter { t in
+                            selectedVariante.prixCombinaisons[Variante.cleCombinaison(t, c)] != nil
+                        }
+                        return valides.isEmpty ? selectedVariante.tailles : valides
+                    }()
+
                     Picker("Taille", selection: $ligne.taille) {
                         Text("—").tag(Optional<String>.none)
-                        ForEach(selectedVariante.tailles, id: \.self) { t in
+                        ForEach(taillesFiltrees, id: \.self) { t in
                             Text(t).tag(Optional(t))
                         }
                     }
-                    .id("taille-\(ligne.id)")
+                    .id("taille-\(ligne.id)-\(ligne.couleur ?? "")")
                     .disabled(disabled)
                 }
 
                 if !selectedVariante.couleurs.isEmpty {
+                    // Filtrer les couleurs : si combinaisons et taille choisie, ne montrer que les couleurs valides
+                    let couleursFiltrees: [String] = {
+                        guard aDesCombinaisons, let t = ligne.taille else { return selectedVariante.couleurs }
+                        let valides = selectedVariante.couleurs.filter { c in
+                            selectedVariante.prixCombinaisons[Variante.cleCombinaison(t, c)] != nil
+                        }
+                        return valides.isEmpty ? selectedVariante.couleurs : valides
+                    }()
+
                     Picker("Couleur", selection: $ligne.couleur) {
                         Text("—").tag(Optional<String>.none)
-                        ForEach(selectedVariante.couleurs, id: \.self) { c in
+                        ForEach(couleursFiltrees, id: \.self) { c in
                             Text(c).tag(Optional(c))
                         }
                     }
-                    .id("couleur-\(ligne.id)")
+                    .id("couleur-\(ligne.id)-\(ligne.taille ?? "")")
                     .disabled(disabled)
                 }
             }

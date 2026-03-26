@@ -168,6 +168,8 @@ struct VarianteDetailView: View {
     @State private var nouvelleCouleur = ""
     @State private var prixText = ""
     @State private var prixTailleTexts: [String: String] = [:]
+    @State private var prixCouleurTexts: [String: String] = [:]
+    @State private var prixCombiTexts: [String: String] = [:]
 
     var body: some View {
         Form {
@@ -260,9 +262,33 @@ struct VarianteDetailView: View {
                         Image(systemName: "paintpalette.fill")
                             .foregroundStyle(.seafoam)
                         Text(couleur)
+                        Spacer()
+                        TextField(String(format: "%.2f", variante.prix), text: Binding(
+                            get: { prixCouleurTexts[couleur] ?? "" },
+                            set: { newValue in
+                                prixCouleurTexts[couleur] = newValue
+                                let cleaned = newValue.replacingOccurrences(of: ",", with: ".")
+                                if let val = Double(cleaned), val > 0 {
+                                    variante.prixCouleurs[couleur] = val
+                                } else if newValue.isEmpty {
+                                    variante.prixCouleurs.removeValue(forKey: couleur)
+                                }
+                            }
+                        ))
+                        .keyboardType(.decimalPad)
+                        .multilineTextAlignment(.trailing)
+                        .frame(width: 70)
+                        .padding(6)
+                        .background(Color(.systemGray6))
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                        Text("€")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
                     }
                 }
                 .onDelete { indices in
+                    let removed = indices.map { variante.couleurs[$0] }
+                    for c in removed { variante.prixCouleurs.removeValue(forKey: c) }
                     variante.couleurs.remove(atOffsets: indices)
                 }
 
@@ -284,7 +310,53 @@ struct VarianteDetailView: View {
             } header: {
                 StyledSectionHeader(title: "Couleurs", icon: "paintpalette")
             } footer: {
-                Text("Optionnel. Ajoutez les couleurs disponibles pour cette variante.")
+                Text("Optionnel. Ajoutez les couleurs disponibles. Vous pouvez définir un prix spécifique par couleur ; sinon le prix de la variante s'applique.")
+            }
+
+            // MARK: - Combinaisons taille × couleur
+            if !variante.tailles.isEmpty && !variante.couleurs.isEmpty {
+                Section {
+                    ForEach(variante.tailles, id: \.self) { taille in
+                        ForEach(variante.couleurs, id: \.self) { couleur in
+                            let cle = Variante.cleCombinaison(taille, couleur)
+                            HStack {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(taille)
+                                        .font(.subheadline)
+                                    Text(couleur)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                                Spacer()
+                                TextField(String(format: "%.2f", variante.prix), text: Binding(
+                                    get: { prixCombiTexts[cle] ?? "" },
+                                    set: { newValue in
+                                        prixCombiTexts[cle] = newValue
+                                        let cleaned = newValue.replacingOccurrences(of: ",", with: ".")
+                                        if let val = Double(cleaned), val > 0 {
+                                            variante.prixCombinaisons[cle] = val
+                                        } else if newValue.isEmpty {
+                                            variante.prixCombinaisons.removeValue(forKey: cle)
+                                        }
+                                    }
+                                ))
+                                .keyboardType(.decimalPad)
+                                .multilineTextAlignment(.trailing)
+                                .frame(width: 70)
+                                .padding(6)
+                                .background(Color(.systemGray6))
+                                .clipShape(RoundedRectangle(cornerRadius: 8))
+                                Text("€")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                } header: {
+                    StyledSectionHeader(title: "Prix par combinaison", icon: "tablecells")
+                } footer: {
+                    Text("Définissez un prix pour chaque combinaison taille × couleur. Prioritaire sur les prix par taille ou couleur seuls.")
+                }
             }
         }
         .navigationTitle(variante.nom.isEmpty ? "Nouvelle variante" : variante.nom)
@@ -301,6 +373,12 @@ struct VarianteDetailView: View {
             prixText = variante.prix > 0 ? String(format: "%.2f", variante.prix) : ""
             for (taille, prix) in variante.prixTailles {
                 prixTailleTexts[taille] = String(format: "%.2f", prix)
+            }
+            for (couleur, prix) in variante.prixCouleurs {
+                prixCouleurTexts[couleur] = String(format: "%.2f", prix)
+            }
+            for (cle, prix) in variante.prixCombinaisons {
+                prixCombiTexts[cle] = String(format: "%.2f", prix)
             }
         }
     }

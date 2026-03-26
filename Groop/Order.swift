@@ -20,12 +20,36 @@ struct Variante: Identifiable, Codable, Hashable {
     var couleurs: [String] = []
     /// Prix spécifiques par taille (clé = nom de la taille). Si absent, le prix de la variante s'applique.
     var prixTailles: [String: Double] = [:]
+    /// Prix spécifiques par couleur (clé = nom de la couleur). Si absent, le prix taille ou variante s'applique.
+    var prixCouleurs: [String: Double] = [:]
+    /// Prix spécifiques par combinaison taille+couleur (clé = "taille|couleur"). Prioritaire sur prixTailles et prixCouleurs.
+    var prixCombinaisons: [String: Double] = [:]
+
+    /// Clé composite pour une combinaison taille+couleur.
+    static func cleCombinaison(_ taille: String, _ couleur: String) -> String {
+        "\(taille)|\(couleur)"
+    }
 
     /// Retourne le prix effectif pour une taille donnée : prix taille si défini, sinon prix variante.
     func prixPourTaille(_ taille: String?) -> Double {
         if let t = taille, let p = prixTailles[t] {
             return p
         }
+        return prix
+    }
+
+    /// Retourne le prix effectif : combinaison > couleur > taille > base.
+    func prixPourTailleCouleur(_ taille: String?, _ couleur: String?) -> Double {
+        // 1) Prix combinaison taille+couleur
+        if let t = taille, let c = couleur {
+            let cle = Variante.cleCombinaison(t, c)
+            if let p = prixCombinaisons[cle] { return p }
+        }
+        // 2) Prix couleur (contenant)
+        if let c = couleur, let p = prixCouleurs[c] { return p }
+        // 3) Prix taille
+        if let t = taille, let p = prixTailles[t] { return p }
+        // 4) Prix de base
         return prix
     }
 
@@ -38,15 +62,19 @@ struct Variante: Identifiable, Codable, Hashable {
         tailles = try c.decodeIfPresent([String].self, forKey: .tailles) ?? []
         couleurs = try c.decodeIfPresent([String].self, forKey: .couleurs) ?? []
         prixTailles = try c.decodeIfPresent([String: Double].self, forKey: .prixTailles) ?? [:]
+        prixCouleurs = try c.decodeIfPresent([String: Double].self, forKey: .prixCouleurs) ?? [:]
+        prixCombinaisons = try c.decodeIfPresent([String: Double].self, forKey: .prixCombinaisons) ?? [:]
     }
 
-    init(id: UUID = UUID(), nom: String = "", prix: Double = 0, tailles: [String] = [], couleurs: [String] = [], prixTailles: [String: Double] = [:]) {
+    init(id: UUID = UUID(), nom: String = "", prix: Double = 0, tailles: [String] = [], couleurs: [String] = [], prixTailles: [String: Double] = [:], prixCouleurs: [String: Double] = [:], prixCombinaisons: [String: Double] = [:]) {
         self.id = id
         self.nom = nom
         self.prix = prix
         self.tailles = tailles
         self.couleurs = couleurs
         self.prixTailles = prixTailles
+        self.prixCouleurs = prixCouleurs
+        self.prixCombinaisons = prixCombinaisons
     }
 }
 
@@ -77,7 +105,7 @@ struct LigneCommande: Identifiable, Codable {
 
     func prix(variantes: [Variante]) -> Double? {
         guard let v = variantes.first(where: { $0.nom == variante }) else { return nil }
-        return v.prixPourTaille(taille)
+        return v.prixPourTailleCouleur(taille, couleur)
     }
 
     func total(variantes: [Variante]) -> Double? {

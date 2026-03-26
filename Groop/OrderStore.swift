@@ -1448,15 +1448,33 @@ class OrderStore: ObservableObject {
     /// Retourne un résumé de l'import.
     func importerCommandesDepuisFichier(url: URL) -> ImportCommandesResult {
         var result = ImportCommandesResult()
-        guard let contenu = try? String(contentsOf: url, encoding: .utf8) else {
-            // Tenter latin1 comme fallback
-            guard let contenu = try? String(contentsOf: url, encoding: .isoLatin1) else {
-                result.erreurs.append("Impossible de lire le fichier.")
-                return result
-            }
-            return parseCommandesCSV(contenu)
+        var contenu: String
+        if let c = try? String(contentsOf: url, encoding: .utf8) {
+            contenu = c
+        } else if let c = try? String(contentsOf: url, encoding: .isoLatin1) {
+            contenu = c
+        } else {
+            result.erreurs.append("Impossible de lire le fichier.")
+            return result
         }
-        return parseCommandesCSV(contenu)
+
+        // 1) Tenter le parsing CSV classique (avec en-tête)
+        let csvResult = parseCommandesCSV(contenu)
+        if csvResult.lignesAjoutees > 0 || csvResult.variantesCrees > 0 {
+            return csvResult
+        }
+
+        // 2) Fallback : parsing intelligent (texte brut de PDF copié-collé)
+        if let produits = AITriageService.shared.parserDirectement(contenu) {
+            var iaResult = appliquerProduitsIA(produits)
+            iaResult.diagnosticIA = AITriageService.shared.dernierDiagnostic
+            if iaResult.variantesCrees > 0 || iaResult.prixImportes > 0 {
+                return iaResult
+            }
+        }
+
+        // 3) Rien n'a marché — retourner le résultat CSV (avec ses erreurs éventuelles)
+        return csvResult
     }
 
     private func parseCommandesCSV(_ contenu: String) -> ImportCommandesResult {
@@ -2138,6 +2156,15 @@ class OrderStore: ObservableObject {
                         result.prixImportes += 1
                     }
                 }
+
+                // Prix par combinaison taille+couleur ou par couleur seule
+                if !couleur.isEmpty && p.prix > 0 {
+                    if !taille.isEmpty {
+                        let cle = Variante.cleCombinaison(taille, couleur)
+                        variantes[idx].prixCombinaisons[cle] = p.prix
+                    }
+                    variantes[idx].prixCouleurs[couleur] = p.prix
+                }
             }
         }
 
@@ -2206,20 +2233,57 @@ class OrderStore: ObservableObject {
             return
         }
 
-        // Si IA configurée → toujours utiliser l'OCR (préserve la structure en colonnes)
-        // car page.string perd la structure tabulaire des PDFs complexes
-        if AITriageService.shared.estConfigure {
-            importerPDFParOCR(document: document, completion: completion)
-            return
-        }
-
-        // Sans IA : tenter d'abord l'extraction de texte directe (PDF non scanné)
+        // Tenter d'abord l'extraction de texte directe (PDF non scanné)
         var fullText = ""
         for i in 0..<document.pageCount {
             if let page = document.page(at: i), let text = page.string {
                 fullText += text + "\n"
             }
         }
+
+        if AITriageService.shared.estConfigure {
+            print("🟢 [IMPORT PDF] IA configurée, texte brut: \(fullText.count) car.")
+            AITriageService.shared.logDebug("=== TEXTE BRUT PDF page.string (\(fullText.count) car.) ===\n\(fullText.prefix(5000))\n=== FIN TEXTE BRUT ===")
+
+            // 1) PRIORITAIRE : envoyer le texte brut directement à l'IA (meilleure compréhension)
+            if !fullText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                print("🟢 [IMPORT PDF] Envoi du texte brut à l'IA...")
+                AITriageService.shared.trierTexte(fullText) { produits in
+                    if let produits = produits {
+                        print("🟢 [IMPORT PDF] IA texte: \(produits.count) produits")
+                        let diag = AITriageService.shared.dernierDiagnostic
+                        var resultIA = self.appliquerProduitsIA(produits)
+                        resultIA.diagnosticIA = diag
+                        print("🟢 [IMPORT PDF] appliquerProduitsIA: \(resultIA.variantesCrees) variantes, \(resultIA.prixImportes) prix")
+                        DispatchQueue.main.async { completion(resultIA) }
+                        return
+                    }
+                    print("🔴 [IMPORT PDF] IA texte a échoué, fallback parsing direct...")
+
+                    // 2) Fallback : parsing direct (regex, gratuit, déterministe)
+                    if let produitsDirect = AITriageService.shared.parserDirectement(fullText) {
+                        print("🟡 [IMPORT PDF] Parsing direct: \(produitsDirect.count) produits")
+                        let diag = AITriageService.shared.dernierDiagnostic
+                        var resultIA = self.appliquerProduitsIA(produitsDirect)
+                        resultIA.diagnosticIA = diag
+                        DispatchQueue.main.async { completion(resultIA) }
+                        return
+                    }
+                    print("🔴 [IMPORT PDF] Parsing direct a échoué, fallback OCR...")
+
+                    // 3) Dernier recours : OCR + IA (pour PDF scannés)
+                    self.importerPDFParOCR(document: document, completion: completion)
+                }
+                return
+            }
+            print("🔴 [IMPORT PDF] Texte brut vide, fallback OCR...")
+            // OCR + IA (pas de texte intégré → PDF scanné)
+            importerPDFParOCR(document: document, completion: completion)
+            return
+        }
+        print("🔴 [IMPORT PDF] IA non configurée, parsing CSV classique")
+
+        // Sans IA : parsing classique du texte direct
         if !fullText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             let result = parseCommandesCSV(fullText)
             if result.lignesAjoutees > 0 || result.variantesCrees > 0 {
