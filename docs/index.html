@@ -115,7 +115,7 @@ input:focus{outline:none;border-color:var(--ocean)}
     }
     for (var i = startIdx; i < seg.length; i++) {
       var f = seg[i].split('~');
-      var v = { n: f[0], x: parseFloat(f[1]) || 0, tp: {} };
+      var v = { n: f[0], x: parseFloat(f[1]) || 0, tp: {}, cp: {}, xp: {} };
       if (f[2]) {
         var sep = f[2].indexOf(';') >= 0 ? ';' : ',';
         var rawTailles = f[2].split(sep);
@@ -133,7 +133,26 @@ input:focus{outline:none;border-color:var(--ocean)}
       }
       if (f[3]) {
         var sepC = f[3].indexOf(';') >= 0 ? ';' : ',';
-        v.co = f[3].split(sepC);
+        var rawCouleurs = f[3].split(sepC);
+        v.co = [];
+        rawCouleurs.forEach(function(c) {
+          var parts = c.split(':');
+          var nom = parts[0];
+          if (nom) {
+            v.co.push(nom);
+            if (parts.length > 1 && parts[1]) {
+              v.cp[nom] = parseFloat(parts[1]);
+            }
+          }
+        });
+      }
+      if (f[4]) {
+        f[4].split(';').forEach(function(combo) {
+          var parts = combo.split(':');
+          if (parts[0] && parts.length > 1 && parts[1]) {
+            v.xp[parts[0]] = parseFloat(parts[1]);
+          }
+        });
       }
       cfg.v.push(v);
     }
@@ -268,6 +287,11 @@ input:focus{outline:none;border-color:var(--ocean)}
   function prixPourLigne(si) {
     var s = state[si];
     var v = VARIANTES[s.varIdx];
+    if (s.taille && s.couleur && v.xp) {
+      var cle = s.taille + '+' + s.couleur;
+      if (v.xp[cle] !== undefined) return v.xp[cle];
+    }
+    if (s.couleur && v.cp && v.cp[s.couleur] !== undefined) return v.cp[s.couleur];
     if (s.taille && v.tp && v.tp[s.taille] !== undefined) return v.tp[s.taille];
     return v.x;
   }
@@ -339,11 +363,16 @@ input:focus{outline:none;border-color:var(--ocean)}
 
     // Calculer le total pour la confirmation
     var total = 0;
+    function prixPourVariante(v, t, c) {
+      if (t && c && v.xp) { var k = t+'+'+c; if (v.xp[k] !== undefined) return v.xp[k]; }
+      if (c && v.cp && v.cp[c] !== undefined) return v.cp[c];
+      if (t && v.tp && v.tp[t] !== undefined) return v.tp[t];
+      return v.x;
+    }
     lignes.forEach(function(l){
       VARIANTES.forEach(function(v){
         if(v.n===l.v){
-          var p = (l.t && v.tp && v.tp[l.t]!==undefined) ? v.tp[l.t] : v.x;
-          total += p * l.q;
+          total += prixPourVariante(v, l.t||null, l.c||null) * l.q;
         }
       });
     });
@@ -363,7 +392,7 @@ input:focus{outline:none;border-color:var(--ocean)}
         var lPrix = 0;
         VARIANTES.forEach(function(v){
           if(v.n===l.v){
-            lPrix = (l.t && v.tp && v.tp[l.t]!==undefined) ? v.tp[l.t] : v.x;
+            lPrix = prixPourVariante(v, l.t||null, l.c||null);
           }
         });
         successHtml += '<div class="recap-line"><span>'+esc(d)+' &times; '+fmtQte(l.q)+'</span><span>'+( lPrix*l.q).toFixed(2)+' &euro;</span></div>';

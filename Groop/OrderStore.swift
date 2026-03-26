@@ -1377,7 +1377,10 @@ class OrderStore: ObservableObject {
     private let pagesBaseURL = "https://boboul-cloud.github.io/groop/"
 
     /// Génère un lien web vers la page de commande hébergée sur GitHub Pages
-    /// Format compact : "2|titre|unite|telVendeur|nom~prix~t1,t2~c1,c2|..." en base64url
+    /// Format compact : "2|titre|unite|telVendeur|nom~prix~tailles~couleurs[~combinaisons]|..."
+    /// - tailles : t1:prix;t2;t3:prix (prix optionnel par taille)
+    /// - couleurs : c1:prix;c2;c3:prix (prix optionnel par couleur)
+    /// - combinaisons (optionnel) : taille+couleur:prix;... (prix par combo taille+couleur)
     func genererLienWebCommande() -> URL? {
         let parts = variantes.filter { !$0.nom.isEmpty }.map { v in
             let taillesParts = v.tailles.map { t in
@@ -1386,7 +1389,23 @@ class OrderStore: ObservableObject {
                 }
                 return t
             }
-            return "\(v.nom)~\(v.prix)~\(taillesParts.joined(separator: ";"))~\(v.couleurs.joined(separator: ";"))"
+            let couleursParts = v.couleurs.map { c in
+                if let p = v.prixCouleurs[c] {
+                    return "\(c):\(p)"
+                }
+                return c
+            }
+            let base = "\(v.nom)~\(v.prix)~\(taillesParts.joined(separator: ";"))~\(couleursParts.joined(separator: ";"))"
+            // Ajouter les combinaisons seulement s'il y en a
+            if !v.prixCombinaisons.isEmpty {
+                let comboParts = v.prixCombinaisons.compactMap { (cle, prix) -> String? in
+                    let parts = cle.split(separator: "|")
+                    guard parts.count == 2 else { return nil }
+                    return "\(parts[0])+\(parts[1]):\(prix)"
+                }
+                return base + "~" + comboParts.joined(separator: ";")
+            }
+            return base
         }
         guard !parts.isEmpty else { return nil }
         let payload = "2|\(titreCampagne)|\(uniteQuantite.rawValue)|\(telephoneVendeur)|\(parts.joined(separator: "|"))"
