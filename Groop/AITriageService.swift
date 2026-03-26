@@ -64,13 +64,20 @@ class AITriageService {
             "Ta mission : pour chaque ligne produit, extraire et SEPARER les informations dans ce format :",
             "NOM;VOLUME;CONTENANT;PRIX_HT",
             "",
+            "METHODE DE TRAVAIL (FORMAT C - espaces simples) :",
+            "Chaque ligne contient TOUS les champs d'UN SEUL produit.",
+            "Le prix qui apparait sur une ligne appartient UNIQUEMENT a cette ligne.",
+            "Traite chaque ligne du texte de facon INDEPENDANTE, dans l'ORDRE EXACT du texte.",
+            "NE JAMAIS deplacer un prix d'une ligne vers une autre.",
+            "NE JAMAIS regrouper ou fusionner des lignes entre elles.",
+            "",
             "Regles STRICTES :",
             "1. NOM = le nom commercial du produit uniquement.",
-            "   Exemples : Intense AOP Bio, Fruite Vert, Cepes, Truffe, Vin Blanc, Vin Rose.",
+            "   Exemples : Intense AOP Bio, Fruite Vert, Cepes, Truffe, Vin Blanc, Vin Rose, Coffret Decouverte, Croustaillou.",
             "   NE PAS inclure le volume, le contenant, le prix ou la TVA dans le nom.",
             "2. VOLUME = la contenance : 10cl, 15cl, 20cl, 25cl, 50cl, 75cl, 100cl, 3L, 5L, etc.",
             "   Si absent, laisser vide.",
-            "3. CONTENANT = Bouteille, Bidon, Bag in Box, Cubi, Fontaine, Fut, Cannette, etc.",
+            "3. CONTENANT = Bouteille, Bidon, Bag in Box, Cubi, Fontaine, Fut, Cannette, Bocal, Pot, etc.",
             "   Si absent, laisser vide.",
             "4. PRIX_HT = le prix HT unitaire comme nombre decimal avec POINT. Ex: 7.85, 12.40",
             "   - Convertir la virgule decimale en point : 7,85 devient 7.85",
@@ -79,13 +86,20 @@ class AITriageService {
             "   - Si aucun prix, mettre 0.",
             "5. Une ligne par combinaison produit + volume + contenant.",
             "   Le NOM doit etre identique entre les lignes du meme produit.",
-            "6. IGNORER :",
-            "   - Titres de sections en majuscules (ex: INTENSE AOP Provence, COFFRETS DECOUVERTE, VINS)",
+            "   REGLE CRITIQUE : chaque ligne du texte source contient UN SEUL produit avec UN SEUL prix.",
+            "   NE PAS fusionner plusieurs lignes en un seul produit.",
+            "   NE PAS melanger les produits de sections differentes.",
+            "6. IGNORER uniquement :",
+            "   - Les lignes ENTIERES EN MAJUSCULES qui sont des titres de sections (ex: 'INTENSE AOP Provence – CERTIFIEE BIO').",
+            "     ATTENTION : ces titres NE SONT PAS des produits, ne pas les extraire.",
+            "     Mais les produits QUI SUIVENT ces titres DOIVENT etre extraits normalement.",
             "   - En-tetes de colonnes (ex: Designation;Contenance;Conditionnement;Prix HT;TVA)",
             "   - Lignes avec uniquement un taux TVA (5,50%)",
             "   - Codes article longs (3760...), codes-barres",
             "   - Totaux, sous-totaux, remises, frais de port",
             "   - Mentions legales, adresses, telephones, numeros de page",
+            "   IMPORTANT : NE PAS ignorer de sections entieres. CHAQUE produit avec un prix doit etre extrait,",
+            "   y compris les coffrets, vins, et tout autre produit meme s'il est dans une section specifique.",
             "7. NE PAS mettre de ligne d'en-tete. NE PAS ajouter de texte explicatif.",
             "8. Si aucun produit, repondre : AUCUN_PRODUIT",
             "",
@@ -117,18 +131,33 @@ class AITriageService {
             "Intense AOP Bio 50cl Bouteille 12,85 € 5,50%",
             "FRUITE VERT",
             "Fruite Vert 25cl Bouteille 6,50 € 5,50%",
+            "COFFRETS DECOUVERTE",
+            "Coffret Decouverte 3x25cl 6 bouteilles 32,80 € 20,00%",
+            "VINS",
+            "Vin Blanc 75cl 6 bouteilles 16,10 € 20,00%",
+            "Vin Rose 75cl 6 bouteilles 17,90 € 20,00%",
+            "Vin Rouge 75cl 6 bouteilles 32,80 € 20,00%",
+            "CROUSTAILLOU",
+            "Croustaillou 200g Bocal 4,25 € 5,50%",
+            "Croustaillou 100g Pot 3,45 € 5,50%",
             "",
             "SORTIE ATTENDUE (identique pour les 3 formats) :",
             "Intense AOP Bio;25cl;Bouteille;7.85",
             "Intense AOP Bio;25cl;Bidon;7.40",
             "Intense AOP Bio;50cl;Bouteille;12.85",
             "Fruite Vert;25cl;Bouteille;6.50",
+            "Coffret Decouverte;3x25cl;6 bouteilles;32.80",
+            "Vin Blanc;75cl;6 bouteilles;16.10",
+            "Vin Rose;75cl;6 bouteilles;17.90",
+            "Vin Rouge;75cl;6 bouteilles;32.80",
+            "Croustaillou;200g;Bocal;4.25",
+            "Croustaillou;100g;Pot;3.45",
         ].joined(separator: "\n")
     }
 
     /// Envoie le texte brut extrait d'un PDF à l'IA pour triage.
-    /// Si le texte dépasse `tailleMaxChunk`, il est découpé en morceaux envoyés séquentiellement,
-    /// puis les résultats sont fusionnés.
+    /// Accepte soit un texte simple, soit des pages séparées par `\n---PAGE---\n`.
+    /// Chaque page est envoyée comme un chunk séparé pour éviter la troncature.
     func trierTexte(_ texteBrut: String, completion: @escaping ([ProduitIA]?) -> Void) {
         guard estConfigure else {
             completion(nil)
@@ -146,7 +175,19 @@ class AITriageService {
             .replacingOccurrences(of: "\u{FFE0}", with: "€")
         logDebug("=== TEXTE BRUT NORMALISÉ (\(texteNormalise.count) car.) ===\n\(texteNormalise.prefix(2000))\n=== FIN TEXTE BRUT ===")
 
-        let chunks = decouper(texte: texteNormalise, tailleMax: tailleMaxChunk)
+        // Découper par pages si le marqueur est présent, sinon par taille
+        let chunks: [String]
+        let pageMarker = "\n---PAGE---\n"
+        if texteNormalise.contains(pageMarker) {
+            chunks = texteNormalise.components(separatedBy: pageMarker)
+                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .filter { !$0.isEmpty }
+            print("🔵 [IA] Découpage par pages: \(chunks.count) chunks")
+            for (i, c) in chunks.enumerated() { print("🔵 [IA] Chunk \(i+1): \(c.count) car.") }
+        } else {
+            chunks = decouper(texte: texteNormalise, tailleMax: tailleMaxChunk)
+            print("🔵 [IA] Découpage par taille: \(chunks.count) chunks")
+        }
 
         if chunks.count == 1 {
             // Cas simple : un seul chunk

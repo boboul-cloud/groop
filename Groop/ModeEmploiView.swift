@@ -158,6 +158,32 @@ struct ModeEmploiView: View {
                 )
 
                 guideSection(
+                    id: "ia",
+                    icon: "cpu.fill",
+                    color: .purple,
+                    titre: "Import IA (PDF)",
+                    contenu: """
+                    L'import par intelligence artificielle permet de créer automatiquement vos produits à partir d'un fichier PDF de tarifs fournisseur.
+
+                    Pour l'utiliser :
+                    1. Allez dans Réglages > Clé API OpenAI et collez votre clé.
+                    2. Lors de la configuration d'une campagne, appuyez sur « Importer un fichier » et sélectionnez un PDF.
+                    3. L'IA analyse chaque page du PDF et extrait automatiquement les noms, tailles, contenants et prix.
+
+                    Formats supportés :
+                    • PDF avec texte intégré (catalogues, tarifs fournisseurs)
+                    • Fichiers CSV ou texte tabulé
+                    • PDF scannés (via OCR automatique en dernier recours)
+
+                    L'import crée les variantes avec leurs prix par taille et contenant. Vous pouvez ensuite ajuster manuellement si nécessaire.
+
+                    💡 Astuce : un PDF bien structuré (avec colonnes claires) donnera de meilleurs résultats.
+
+                    ⚠️ Nécessite une clé API OpenAI (payante à l'usage, quelques centimes par import).
+                    """
+                )
+
+                guideSection(
                     id: "pro",
                     icon: "star.circle.fill",
                     color: .orange,

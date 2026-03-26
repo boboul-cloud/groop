@@ -2234,12 +2234,17 @@ class OrderStore: ObservableObject {
         }
 
         // Tenter d'abord l'extraction de texte directe (PDF non scanné)
-        var fullText = ""
+        var pages: [String] = []
         for i in 0..<document.pageCount {
             if let page = document.page(at: i), let text = page.string {
-                fullText += text + "\n"
+                pages.append(text)
+                print("🟢 [IMPORT PDF] Page \(i+1): \(text.count) car.")
+            } else {
+                print("🔴 [IMPORT PDF] Page \(i+1): aucun texte extrait")
             }
         }
+        // Joindre les pages avec un marqueur pour que l'IA les traite séparément
+        let fullText = pages.joined(separator: "\n---PAGE---\n")
 
         if AITriageService.shared.estConfigure {
             print("🟢 [IMPORT PDF] IA configurée, texte brut: \(fullText.count) car.")
