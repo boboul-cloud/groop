@@ -386,7 +386,7 @@ input:focus{outline:none;border-color:var(--ocean)}
   document.getElementById("nom").addEventListener("input", update);
   document.getElementById("tel").addEventListener("input", update);
 
-  window.soumettre = function(){
+  window.soumettre = async function(){
     var nom = document.getElementById("nom").value.trim();
     var tel = document.getElementById("tel").value.trim();
     var lignes = [];
@@ -399,14 +399,24 @@ input:focus{outline:none;border-color:var(--ocean)}
       }
     });
 
-    // Format compact : "c" + base64url(nom|tel|var;qty;taille;couleur,var;qty;taille;couleur,...)
+    // Format compact : nom|tel|var;qty;taille;couleur,...
     var compactLines = lignes.map(function(l){
       return (l.v||'') + ';' + l.q + ';' + (l.t||'') + ';' + (l.c||'');
     }).join(',');
     var compactData = nom + '|' + tel + '|' + compactLines;
-    var compactB64 = btoa(unescape(encodeURIComponent(compactData)))
-      .replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
-    var deepUrl = "groop://order?d=c" + compactB64;
+
+    // Compresser avec deflate-raw puis base64url, préfixe "z"
+    var inputBytes = new TextEncoder().encode(compactData);
+    var cs = new CompressionStream('deflate-raw');
+    var writer = cs.writable.getWriter();
+    writer.write(inputBytes);
+    writer.close();
+    var compressedBuf = await new Response(cs.readable).arrayBuffer();
+    var compressedBytes = new Uint8Array(compressedBuf);
+    var binStr = '';
+    for (var i = 0; i < compressedBytes.length; i++) binStr += String.fromCharCode(compressedBytes[i]);
+    var compactB64 = btoa(binStr).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+    var deepUrl = "groop://order?d=z" + compactB64;
 
     // Récap texte pour le SMS (court pour rester sous la limite iOS)
     var nbLignes = lignes.length;
