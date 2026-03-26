@@ -106,7 +106,7 @@ input:focus{outline:none;border-color:var(--ocean)}
     var bin = b64urlDecode(b64str);
     var bytes = new Uint8Array(bin.length);
     for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-    var ds = new DecompressionStream('raw');
+    var ds = new DecompressionStream('deflate-raw');
     var writer = ds.writable.getWriter();
     writer.write(bytes);
     writer.close();
