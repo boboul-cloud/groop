@@ -252,7 +252,7 @@ input:focus{outline:none;border-color:var(--ocean)}
           html += '<div class="size-line">';
           html += '<div class="size-top">';
           html += '<span class="size-name">'+esc(t)+'</span>';
-          if (v.tp[t] !== undefined) {
+          if (v.tp[t] !== undefined && !(v.co && v.co.length)) {
             html += '<span class="size-price">'+prix.toFixed(2)+'&euro;</span>';
           }
           html += '<div class="qty-row" style="margin:0;margin-left:auto">';
