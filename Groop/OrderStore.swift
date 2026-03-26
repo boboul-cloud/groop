@@ -8,6 +8,7 @@
 import Foundation
 import Combine
 import SwiftUI
+import Compression
 import UIKit
 import Vision
 import PDFKit
@@ -1411,11 +1412,29 @@ class OrderStore: ObservableObject {
         let payload = "2|\(titreCampagne)|\(uniteQuantite.rawValue)|\(telephoneVendeur)|\(parts.joined(separator: "|"))"
         guard let raw = payload.data(using: .utf8) else { return nil }
 
-        let encoded = raw.base64EncodedString()
+        // Compresser avec zlib pour raccourcir l'URL
+        let compressed = compressZlib(raw)
+        let dataToEncode = compressed ?? raw
+        let prefix = compressed != nil ? "z" : ""
+
+        let encoded = prefix + dataToEncode.base64EncodedString()
             .replacingOccurrences(of: "+", with: "-")
             .replacingOccurrences(of: "/", with: "_")
             .replacingOccurrences(of: "=", with: "")
         return URL(string: pagesBaseURL + "?d=" + encoded)
+    }
+
+    /// Compresse des données avec zlib (raw deflate)
+    private func compressZlib(_ data: Data) -> Data? {
+        let bufferSize = max(data.count, 64)
+        let destinationBuffer = UnsafeMutablePointer<UInt8>.allocate(capacity: bufferSize)
+        defer { destinationBuffer.deallocate() }
+        let compressedSize = data.withUnsafeBytes { (rawBuffer: UnsafeRawBufferPointer) -> Int in
+            guard let src = rawBuffer.baseAddress?.assumingMemoryBound(to: UInt8.self) else { return 0 }
+            return compression_encode_buffer(destinationBuffer, bufferSize, src, data.count, nil, COMPRESSION_ZLIB)
+        }
+        guard compressedSize > 0, compressedSize < data.count else { return nil }
+        return Data(bytes: destinationBuffer, count: compressedSize)
     }
 
     private func escaperJS(_ s: String) -> String {

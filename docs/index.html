@@ -101,6 +101,18 @@ input:focus{outline:none;border-color:var(--ocean)}
     return atob(b);
   }
 
+  // Décompresser zlib (raw deflate) via DecompressionStream
+  function inflateRaw(b64str) {
+    var bin = b64urlDecode(b64str);
+    var bytes = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    var ds = new DecompressionStream('raw');
+    var writer = ds.writable.getWriter();
+    writer.write(bytes);
+    writer.close();
+    return new Response(ds.readable).text();
+  }
+
   // Parse le format compact v1 : "1|titre|unite|nom~prix~t1,t2~c1,c2|..."
   // ou v2 : "2|titre|unite|telVendeur|nom~prix~t1;t2~c1;c2|..."
   // Séparateur tailles/couleurs : ";" (v2+) avec fallback "," (v1)
@@ -165,25 +177,38 @@ input:focus{outline:none;border-color:var(--ocean)}
       '<div class="card error"><h2>&#x26A0;&#xFE0F; Erreur</h2><p>' + msg + '</p></div>';
   }
 
-  // Décoder le hash : format compact base64url ou legacy JSON
-  var config;
-  try {
-    var decoded = decodeURIComponent(escape(b64urlDecode(hash)));
-    // Essayer format compact v1
-    config = parseCompact(decoded);
-    // Sinon legacy JSON
-    if (!config) {
-      config = JSON.parse(decoded);
+  // Décoder les données : "z..." = compressé zlib, sinon base64url brut
+  function decodeAndBoot(hash) {
+    if (hash.charAt(0) === 'z') {
+      // Données compressées zlib
+      inflateRaw(hash.substring(1)).then(function(decoded) {
+        processDecoded(decoded);
+      }).catch(function() {
+        showError('Impossible de d&eacute;compresser. Demandez un nouveau lien au vendeur.');
+      });
+    } else {
+      try {
+        var decoded = decodeURIComponent(escape(b64urlDecode(hash)));
+        processDecoded(decoded);
+      } catch(e) {
+        showError('Impossible de lire les donn&eacute;es. Demandez un nouveau lien au vendeur.');
+      }
     }
-  } catch(e) {
-    showError('Impossible de lire les donn&eacute;es. Demandez un nouveau lien au vendeur.');
-    return;
   }
-  if (!config || !config.v) {
-    showError('Donn&eacute;es invalides.');
-    return;
+
+  function processDecoded(decoded) {
+    var config = parseCompact(decoded);
+    if (!config) {
+      try { config = JSON.parse(decoded); } catch(e) {}
+    }
+    if (!config || !config.v) {
+      showError('Donn&eacute;es invalides.');
+      return;
+    }
+    boot(config);
   }
-  boot(config);
+
+  decodeAndBoot(hash);
 
   function boot(config) {
     var VARIANTES = config.v || [];
